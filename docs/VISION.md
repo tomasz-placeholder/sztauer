@@ -8,33 +8,37 @@ Przy kilku maszynach (workstation, laptop, RPi) problem się mnoży: konfiguracj
 
 ## Przyczyna źródłowa
 
-Brak gotowego, samowystarczalnego obrazu Docker, który łączy sandbox wykonawczy, edytor webowy, routing i konfigurację AI w jedną jednostkę — uruchamianą jedną komendą, konfigurującą się automatycznie, identyczną na każdej maszynie.
+Brak gotowego obrazu Docker, który jedną komendą daje izolowane środowisko z Claude Code, edytorem webowym i firewallem — bez plików konfiguracyjnych, bez klonowania repo, bez budowania.
 
 ## Rozwiązanie
 
-Sztauer to gotowy obraz Docker z Claude Code. Użytkownik pobiera obraz z Docker Hub, podaje klucz API, uruchamia kontener — dostaje izolowane środowisko z edytorem webowym, firewallem i Claude Code CLI, dostępne w przeglądarce pod przewidywalną subdomeną.
+Sztauer to obraz Docker z Claude Code. Jedna komenda:
 
-Kluczowa cecha: **zero konfiguracji**. Entrypoint kontenera sam wykrywa co ma do dyspozycji (git credentials, dostępne narzędzia, zasoby) i konfiguruje środowisko odpowiednio. Użytkownik nie wybiera modułów, nie edytuje configów — podaje klucz API i nazwa projektu, resztę robi kontener.
+```bash
+docker run -d -e ANTHROPIC_API_KEY -p 8080:8080 sztauer/sandbox
+```
 
-Współdzielona infrastruktura (reverse proxy) routuje ruch do aktywnych kontenerów. Setup na nowej maszynie to skopiowanie `.env` i `compose.yml` — nie klonowanie repo.
+Otwierasz `localhost:8080` — edytor webowy z Claude Code gotowym do pracy. Firewall aktywny. Git skonfigurowany automatycznie (jeśli credentials zamontowane). Zero plików, zero konfiguracji.
+
+Dla wielu projektów jednocześnie — opcjonalny compose z reverse proxy i subdomenami. Ale podstawowe doświadczenie nie wymaga niczego poza Docker i kluczem API.
 
 ## Zasady projektowe
 
-1. **Gotowy obraz, nie repozytorium.** Użytkownik pobiera obraz z Docker Hub. Nie klonuje repo, nie buduje, nie instaluje. `docker compose up -d` i gotowe.
+1. **Jedna komenda.** `docker run` z kluczem API. Żadnych plików, żadnego klonowania, żadnego builda. Obraz gotowy na Docker Hub.
 
-2. **Auto-detection w runtime.** Entrypoint kontenera wykrywa możliwości środowiska: zamontowane git credentials, dostępne zasoby, zmienne środowiskowe. Konfiguruje się automatycznie — bez flag, bez wybierania modułów.
+2. **Auto-detection w runtime.** Entrypoint kontenera wykrywa zamontowane git credentials, dostępne zasoby, zmienne środowiskowe. Konfiguruje się automatycznie — bez flag, bez configów.
 
-3. **Docker Desktop jako first-class UI.** Projekty czytelnie nazwane, zgrupowane, z labelami i healthcheck statusem. Logi, volumes, status — wszystko widoczne i zarządzalne przez Docker Desktop. Komendy CLI to standardowe `docker compose`.
+3. **Progresywna złożoność.** Jedno środowisko = `docker run`. Wiele środowisk z subdomenami = compose + infra. Każdy poziom jest opcjonalny — wyższy nie wymaga niższego.
 
-4. **Transparentność.** Mimo automatyzacji, wszystko jest standardowym Dockerem. `docker compose`, `docker ps`, Docker Desktop — zero custom tooling. Compose files są krótkie i czytelne.
+4. **Docker Desktop jako first-class UI.** Kontenery z czytelnymi nazwami, healthcheck statusem, przeglądalnymi logami. Start, stop, shell — wszystko przez GUI.
 
-5. **Jeden obraz, wiele maszyn.** Ten sam obraz Docker Hub działa na workstation, laptopie i RPi. Jedyne co się różni to `.env` (sekrety). Entrypoint dostosowuje się do środowiska automatycznie.
+5. **Jeden obraz, wiele maszyn.** Ten sam obraz Docker Hub na workstation, laptopie i RPi (multi-arch). Nie ma konfiguracji maszynowej.
 
-6. **Efemeryczność kontenerów.** Zniszczenie kontenera nie zostawia śladów poza kodem źródłowym na hoście.
+6. **Efemeryczność.** Zniszczenie kontenera nie zostawia śladów poza kodem źródłowym (jeśli zamontowany volume).
 
 ## Nie-cele
 
-- **Nie jest orkiestratorem CI/CD.** Nie buduje pipeline'ów, nie deployuje na produkcję.
-- **Nie jest platformą zespołową.** Jeden użytkownik, wiele maszyn. Brak multi-tenancy.
-- **Nie zarządza projektami.** Nie ma bazy danych, dashboardu ani state'u poza Docker volumes.
-- **Nie wymaga custom CLI.** Interfejsem jest `docker compose` i Docker Desktop.
+- **Nie jest orkiestratorem CI/CD.**
+- **Nie jest platformą zespołową.** Jeden użytkownik, wiele maszyn.
+- **Nie zarządza projektami.** Nie ma bazy danych ani dashboardu.
+- **Nie wymaga żadnych plików.** compose.yml jest opcjonalny — convenience, nie wymóg.

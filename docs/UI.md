@@ -2,9 +2,52 @@
 
 ## Filozofia
 
-Trzy punkty kontaktu: **Docker Desktop** (wizualny przegląd), **terminal** (standardowe komendy Docker), **przeglądarka** (praca). Zero custom tooling — interfejsem jest Docker Compose i Docker Desktop.
+Trzy punkty kontaktu: **Docker Desktop** (wizualny przegląd), **terminal** (standardowe komendy Docker), **przeglądarka** (praca). Zero custom tooling — interfejsem jest Docker i Docker Desktop.
 
-## Terminal
+## Tryb prosty: docker run
+
+### Quick start
+
+```bash
+docker run -d -e ANTHROPIC_API_KEY -p 8080:8080 --name myapp sztauer/sandbox
+```
+
+Otwórz `localhost:8080` — edytor z Claude Code. Gotowe.
+
+### Opcje
+
+```bash
+# Persystentny workspace:
+docker run -d -e ANTHROPIC_API_KEY -p 8080:8080 \
+  -v $(pwd)/myapp:/workspace --name myapp sztauer/sandbox
+
+# Git credentials z hosta:
+docker run -d -e ANTHROPIC_API_KEY -p 8080:8080 \
+  -v ~/.gitconfig:/home/coder/.gitconfig:ro \
+  -v ~/.ssh:/home/coder/.ssh:ro \
+  -v $(pwd)/myapp:/workspace --name myapp sztauer/sandbox
+
+# Drugi projekt na innym porcie:
+docker run -d -e ANTHROPIC_API_KEY -p 8081:8080 \
+  -v $(pwd)/other:/workspace --name other sztauer/sandbox
+```
+
+### Zarządzanie
+
+```bash
+docker stop myapp           # zatrzymaj
+docker start myapp          # wznów
+docker rm -f myapp          # usuń kontener
+docker rm -fv myapp         # usuń kontener + volumes
+docker logs -f myapp        # logi
+docker exec -it myapp bash  # shell
+```
+
+Standardowe komendy Docker. Nic nowego do nauki.
+
+## Tryb multi-project: docker compose (opcjonalny)
+
+Dla wielu projektów z subdomenami. Wymaga `compose.yml` + `infra.yml` (template z repo/README).
 
 ### Komendy
 
@@ -15,88 +58,70 @@ docker compose -f infra.yml up -d
 # Nowy projekt:
 PROJECT_NAME=myapp docker compose up -d
 
-# Status:
-docker ps --filter "label=sztauer"
-
-# Logi:
-PROJECT_NAME=myapp docker compose logs -f
-
-# Stop (zachowaj dane):
+# Stop:
 PROJECT_NAME=myapp docker compose down
 
-# Zniszcz (usuń volumes):
+# Zniszcz:
 PROJECT_NAME=myapp docker compose down -v
-
-# Shell do kontenera:
-docker exec -it sztauer-myapp-workspace-1 bash
 ```
-
-Standardowe komendy Docker Compose. Jedyny parametr to `PROJECT_NAME`.
-
-### Compose profiles (opcjonalne)
-
-```bash
-# GPU passthrough:
-PROJECT_NAME=myapp docker compose --profile gpu up -d
-```
-
-Profiles to jedyny przypadek wymagający dodatkowej flagi. Reszta capabilities wykrywana automatycznie w entrypoincie.
-
-## Docker Desktop
-
-Projekty Sztauer wyglądają czytelnie w Docker Desktop:
-
-- Każdy projekt to osobna **grupa** (Compose project `sztauer-myapp`).
-- Kontenery, volumes i sieci projektu zgrupowane razem.
-- **Healthcheck status** widoczny bez komend CLI.
-- **Logi** przeglądalne przez GUI.
-- **Labels** z metadanymi: nazwa projektu, rola kontenera.
-- Projekty **startowane i zatrzymywane** przez GUI — play/stop w Docker Desktop.
-
-Docker Desktop nie jest wymagany, ale gdy jest — projekty są w nim first-class citizens.
-
-## Przeglądarka
 
 ### Subdomeny
 
 ```
-{nazwa}.localhost              → edytor webowy (workspace projektu)
-{nazwa}-app.localhost          → główny serwis HTTP w kontenerze
+{nazwa}.localhost              → code-server (edytor)
 {nazwa}-{port}.localhost       → dowolny port w kontenerze
 ```
 
-Schemat subdomen wymaga infrastruktury reverse proxy (`infra.yml`). Bez proxy → dostęp przez bezpośrednie porty.
+Wymagają działającej infrastruktury (`infra.yml`). Bez niej → tryb prosty z bezpośrednim portem.
 
 ### Przepływ pracy
 
 ```
 1. PROJECT_NAME=myapp docker compose up -d
-2. Otwórz myapp.localhost → edytor z widokiem na workspace
+2. Otwórz myapp.localhost → edytor
 3. Terminal w edytorze → claude
-4. Claude czyta CLAUDE.md, koduje
-5. Claude stawia serwer → myapp-app.localhost
-6. Iteruj: Claude → przeglądarka → Claude
-7. git push (gdy gotowe)
-8. PROJECT_NAME=myapp docker compose down
+4. Claude koduje, stawia serwer → myapp-3000.localhost
+5. Iteruj: Claude → przeglądarka → Claude
+6. git push (gdy gotowe)
+7. PROJECT_NAME=myapp docker compose down
 ```
+
+## Docker Desktop
+
+Kontenery Sztauer wyglądają czytelnie w Docker Desktop:
+
+- Czytelna **nazwa** kontenera (--name lub compose project name).
+- **Healthcheck status** widoczny bez CLI.
+- **Logi** przeglądalne przez GUI.
+- **Shell** dostępny przez GUI (terminal w Docker Desktop).
+- **Start/Stop** przez GUI — play/stop button.
+
+Docker Desktop nie jest wymagany, ale gdy jest — kontenery są w nim first-class.
 
 ## Setup nowej maszyny
 
-```
-1. Skopiuj compose.yml, infra.yml, .env (lub stwórz z .env.example)
-2. Uzupełnij ANTHROPIC_API_KEY w .env
-3. docker compose -f infra.yml up -d
-4. PROJECT_NAME=myapp docker compose up -d
+### Tryb prosty (zero plików)
+
+```bash
+docker run -d -e ANTHROPIC_API_KEY=sk-... -p 8080:8080 sztauer/sandbox
 ```
 
-Trzy pliki + dwie komendy. Żadnego klonowania repo, żadnego builda, żadnej instalacji.
+Jedna komenda. Gotowe.
+
+### Tryb multi-project (dwa pliki)
+
+```
+1. Skopiuj compose.yml i infra.yml (z README lub repo)
+2. docker compose -f infra.yml up -d
+3. PROJECT_NAME=myapp docker compose up -d
+```
 
 ## Czego NIE ma
 
-- **Custom CLI.** Interfejsem jest Docker Compose i Docker Desktop.
+- **Custom CLI.** Interfejsem jest Docker i Docker Desktop.
+- **Plików konfiguracyjnych.** docker run z env var wystarczy.
 - **Dashboard projektów.** `docker ps`, Docker Desktop wystarczają.
-- **Auto-restart po reboocie.** Kontenery projektów nie restartują się automatycznie. Infrastruktura (proxy) — tak.
-- **SSL/TLS.** `.localhost` działa po HTTP. HTTPS to potencjalny przyszły feature.
-- **Hot-reload konfiguracji.** Zmiana `.env` wymaga restart kontenera.
+- **Auto-restart po reboocie.** Kontenery projektów nie restartują się automatycznie.
+- **SSL/TLS.** `.localhost` działa po HTTP.
 - **Multi-user auth.** Jeden użytkownik, wiele maszyn.
 - **Build wymagany od użytkownika.** Obraz gotowy na Docker Hub.
