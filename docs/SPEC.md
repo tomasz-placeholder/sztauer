@@ -137,3 +137,47 @@ Fazy implementacji z kryteriami akceptacji. Szczegóły techniczne → @docs/ARC
 
 ### F11.5 Human-as-architect
 **Akceptacja:** Użytkownik rozmawia wyłącznie z instancją Architect (lub dashboardem). Definiuje wizję i priorytety. Architect deleguje do specjalistów. Użytkownik reviewuje rezultaty, nie pisze kodu. Pull requesty od poszczególnych instancji trafiają do reviewer instancji, potem do użytkownika.
+
+## Faza 12 — Self-Improving Platform
+
+### F12.1 Dogfooding
+**Akceptacja:** Dedykowana instancja Sztauer (`ROLE=platform-engineer`) monitoruje repo Sztauer, proponuje ulepszenia Dockerfile, entrypointa, konfiguracji. Otwiera PR-y do repo Sztauer — reviewed przez użytkownika.
+
+### F12.2 Auto-tuning
+**Akceptacja:** Platform-engineer instancja analizuje logi i metryki wszystkich instancji. Wykrywa: najczęściej doinstalowywane pakiety → proponuje dodanie do bazowego obrazu. Najczęściej zmieniane settings → proponuje nowe defaults. Powtarzające się błędy firewalla → proponuje rozszerzenie allowlisty.
+
+### F12.3 Template generation
+**Akceptacja:** Po zakończeniu projektu w instancji → platform-engineer analizuje finalny stan workspace i generuje nowy template (`TEMPLATE=`) z tego projektu. Szablony ewoluują na podstawie realnych projektów, nie są pisane ręcznie.
+
+## Faza 13 — Distributed Compute
+
+### F13.1 Multi-machine orchestration
+**Akceptacja:** Instancje na różnych fizycznych maszynach (workstation, laptop, RPi) w tej samej sieci lokalnej tworzą klaster. Zadania wymagające GPU automatycznie routowane do maszyny z GPU. Lekkie zadania (lint, testy) → dowolna wolna maszyna.
+
+### F13.2 Work migration
+**Akceptacja:** Przenosisz laptopa z kawiarni do domu → instancja na laptopie deleguje ciężkie buildy do workstationa w domu automatycznie (po wykryciu sieci). Zero ręcznej konfiguracji — discovery przez mDNS/Bonjour.
+
+### F13.3 Resource pooling
+**Akceptacja:** Klaster raportuje łączne zasoby (CPU/RAM/GPU). Architect instancja podejmuje decyzje o alokacji: "ten build wymaga 16GB RAM → uruchom na workstationie". Dashboard (F9) pokazuje klaster jako całość, nie poszczególne maszyny.
+
+## Faza 14 — Persistent AI Memory
+
+### F14.1 Cross-project knowledge
+**Akceptacja:** Nowa instancja dla projektu Next.js → automatycznie ładuje learned patterns z poprzednich projektów Next.js (architektura, najczęstsze problemy, preferowane biblioteki). Wiedza przechowywana w `~/.sztauer/memory/` jako indeksowane embeddingi.
+
+### F14.2 Personal coding style
+**Akceptacja:** System uczy się preferencji użytkownika: naming conventions, architektura, code review patterns, preferowane narzędzia. Nowa instancja od startu zna styl użytkownika bez CLAUDE.md — bo pamięta z poprzednich sesji.
+
+### F14.3 Organizational knowledge base
+**Akceptacja:** Wiele instancji w ramach jednego użytkownika buduje współdzieloną bazę wiedzy: API patterns, deployment procedures, troubleshooting guides. Claude Code w dowolnej instancji może odpytać bazę: "jak deployowaliśmy serwis X ostatnio?".
+
+## Faza 15 — Full Product Lifecycle
+
+### F15.1 Idea → Production
+**Akceptacja:** Użytkownik opisuje produkt w jednym zdaniu. System: spinuje team topology (F11), projektuje architekturę, implementuje, pisze testy, deployuje na staging (Dockerfile + compose w repo), uruchamia smoke testy. Użytkownik widzi działającą aplikację i iteruje feedbackiem.
+
+### F15.2 Continuous autonomous iteration
+**Akceptacja:** Po deployu na staging → Tester instancja monitoruje logi i metryki. Wykrywa bugi i regresje. Otwiera issue → Architect priorytetyzuje → Backend/Frontend fixuje → Reviewer sprawdza → auto-deploy. Cykl bez ludzkiej interwencji (z opcją veto).
+
+### F15.3 Multi-product management
+**Akceptacja:** Użytkownik zarządza portfelem produktów. Każdy produkt to osobny team topology. Dashboard (F9) rozszerzony o widok portfela: statusy produktów, metryki, aktywne prace. Użytkownik jest CEO swoich produktów, nie programistą.

@@ -144,3 +144,48 @@
 - [ ] **T11.6** Test end-to-end: użytkownik opisuje app → Architect dzieli na taski → Backend/Frontend implementują → Tester weryfikuje → Reviewer sprawdza → PR do usera. Cały flow bez ludzkiej interwencji poza ostatecznym review.
 
 **Kamień milowy:** Autonomiczny zespół AI. Użytkownik definiuje wizję, maszyny dostarczają produkt.
+
+---
+
+## Faza 12 — Self-Improving Platform
+
+- [ ] **T12.1** Rola `platform-engineer`: instancja monitorująca repo Sztauer, proponująca ulepszenia (PR-y z optymalizacjami Dockerfile, entrypoint, defaults)
+- [ ] **T12.2** Auto-tuning: analiza logów i metryk → rekomendacje (pakiety do bazowego obrazu, settings defaults, allowlista)
+- [ ] **T12.3** Auto-generowanie templates: po zakończeniu projektu → platform-engineer tworzy template z finalnego stanu workspace
+- [ ] **T12.4** Test: platform-engineer instancja otwiera PR do repo Sztauer z uzasadnioną zmianą. Zmiana przechodzi review.
+
+**Kamień milowy:** Platforma ulepsza samą siebie. Szablony ewoluują z realnych projektów.
+
+---
+
+## Faza 13 — Distributed Compute
+
+- [ ] **T13.1** Discovery maszyn w sieci lokalnej (mDNS/Bonjour). Maszyny z Sztauer widzą się automatycznie.
+- [ ] **T13.2** Resource pooling: łączne zasoby klastra (CPU/RAM/GPU). Dashboard pokazuje klaster jako całość.
+- [ ] **T13.3** Routing zadań: GPU-heavy → workstation, lekkie → dowolna wolna maszyna. Automatyczne, bez konfiguracji.
+- [ ] **T13.4** Work migration: instancja deleguje build do innej maszyny po wykryciu lepszych zasobów w sieci.
+- [ ] **T13.5** Test: laptop + workstation w jednej sieci. Build z GPU uruchomiony na laptopie → automatycznie zdelegowany do workstationa.
+
+**Kamień milowy:** Klaster domowych maszyn jako jeden pool zasobów. Praca podąża za zasobami.
+
+---
+
+## Faza 14 — Persistent AI Memory
+
+- [ ] **T14.1** Cross-project knowledge: indeksowane embeddingi z poprzednich projektów w `~/.sztauer/memory/`. Nowy projekt Next.js → automatycznie ładuje patterns z poprzednich.
+- [ ] **T14.2** Personal coding style: system uczy się preferencji (naming, architektura, narzędzia). Nowa instancja zna styl bez CLAUDE.md.
+- [ ] **T14.3** Organizational knowledge base: współdzielona baza wiedzy między instancjami (API patterns, deployment procedures, troubleshooting).
+- [ ] **T14.4** Test: nowy projekt w stacku, w którym użytkownik pracował wcześniej → Claude Code od startu stosuje poznane wzorce bez ręcznych instrukcji.
+
+**Kamień milowy:** AI z pamięcią długoterminową. Każdy następny projekt korzysta z wiedzy poprzednich.
+
+---
+
+## Faza 15 — Full Product Lifecycle
+
+- [ ] **T15.1** Idea → Production: jedno zdanie → team topology → architektura → implementacja → testy → staging deploy. Użytkownik widzi działającą aplikację.
+- [ ] **T15.2** Continuous autonomous iteration: Tester monitoruje staging → wykrywa bugi → issue → fix → review → auto-deploy. Cykl bez interwencji (z opcją veto).
+- [ ] **T15.3** Multi-product management: portfel produktów w dashboardzie. Statusy, metryki, aktywne prace. Użytkownik = CEO, nie programista.
+- [ ] **T15.4** Test end-to-end: "Zbuduj mi SaaS do zarządzania fakturami" → po 24h działająca aplikacja na staging z auth, CRUD, dashboardem, testami, CI/CD.
+
+**Kamień milowy:** Od pomysłu do działającego produktu bez pisania kodu. Użytkownik zarządza portfelem produktów.
