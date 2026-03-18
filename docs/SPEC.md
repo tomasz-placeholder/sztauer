@@ -5,7 +5,7 @@ Fazy implementacji z kryteriami akceptacji. Szczegóły techniczne → @docs/ARC
 ## Faza 1 — Obraz bazowy
 
 ### F1.1 Dockerfile
-**Akceptacja:** `docker build -t sztauer/sandbox .` buduje obraz. Zawiera: Claude Code CLI, code-server, web terminal, reverse proxy, iptables, git, node, python.
+**Akceptacja:** `docker build -t sztauer .` buduje obraz. Zawiera: Claude Code CLI, code-server, web terminal, reverse proxy, iptables, git, node, python.
 
 ### F1.2 Entrypoint
 **Akceptacja:** Kontener startuje. Firewall aktywny. code-server nasłuchuje. Web terminal nasłuchuje. `~/CLAUDE.md` obecny (jeśli wcześniej nie istniał). Logi czytelne.
@@ -23,7 +23,7 @@ Fazy implementacji z kryteriami akceptacji. Szczegóły techniczne → @docs/ARC
 **Akceptacja:** `docker run --network sztauer --name a` + `docker run --network sztauer --name b` → kontener `b` odpowiada na `curl http://b:port` z kontenera `a`.
 
 ### F1.7 Test integracyjny
-**Akceptacja:** `docker run -d -p 420:420 --network sztauer --name test sztauer/sandbox` → kontener startuje, healthcheck przechodzi w <30s.
+**Akceptacja:** `docker run -d -p 420:420 --network sztauer --name test sztauer` → kontener startuje, healthcheck przechodzi w <30s.
 
 ## Faza 2 — Split screen i routing
 

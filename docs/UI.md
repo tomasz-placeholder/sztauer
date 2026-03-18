@@ -3,7 +3,7 @@
 ## Quick start
 
 ```bash
-docker run -d -p 420:420 --network sztauer --name myapp sztauer/sandbox
+docker run -d -p 420:420 --network sztauer --name myapp sztauer
 ```
 
 Otwórz `localhost:420/sztauer`. Gotowe.
@@ -33,7 +33,7 @@ localhost:420                  → Twoja aplikacja (to co Claude Code postawi)
 
 ## Pierwsze uruchomienie
 
-1. `docker run -d -p 420:420 --network sztauer --name myapp sztauer/sandbox`
+1. `docker run -d -p 420:420 --network sztauer --name myapp sztauer`
 2. Otwórz `localhost:420/sztauer`
 3. W prawym panelu (Claude Code) → link do zalogowania
 4. Kliknij → zaloguj się kontem Claude Max
@@ -45,25 +45,25 @@ Kolejne starty bez logowania (jeśli volume zachowany).
 
 ```bash
 # Podstawowe:
-docker run -d -p 420:420 --network sztauer --name myapp sztauer/sandbox
+docker run -d -p 420:420 --network sztauer --name myapp sztauer
 
 # Persystentny workspace:
-docker run -d -p 420:420 --network sztauer -v ~/myapp:/home/coder --name myapp sztauer/sandbox
+docker run -d -p 420:420 --network sztauer -v ~/myapp:/home/coder --name myapp sztauer
 
 # Persystentny token Claude:
-docker run -d -p 420:420 --network sztauer -v claude-token:/home/coder/.claude --name myapp sztauer/sandbox
+docker run -d -p 420:420 --network sztauer -v claude-token:/home/coder/.claude --name myapp sztauer
 
 # Git credentials z hosta:
 docker run -d -p 420:420 --network sztauer \
   -v ~/.gitconfig:/home/coder/.gitconfig:ro \
   -v ~/.ssh:/home/coder/.ssh:ro \
-  --name myapp sztauer/sandbox
+  --name myapp sztauer
 
 # Inny port:
-docker run -d -p 8080:420 --network sztauer --name myapp sztauer/sandbox
+docker run -d -p 8080:420 --network sztauer --name myapp sztauer
 
 # GPU:
-docker run -d -p 420:420 --network sztauer --gpus all --name myapp sztauer/sandbox
+docker run -d -p 420:420 --network sztauer --gpus all --name myapp sztauer
 ```
 
 ## Zarządzanie
@@ -82,8 +82,8 @@ Albo Docker Desktop: play/stop/logs/shell w GUI.
 ## Multi-project
 
 ```bash
-docker run -d -p 420:420 --network sztauer --name frontend sztauer/sandbox
-docker run -d -p 421:420 --network sztauer --name backend sztauer/sandbox
+docker run -d -p 420:420 --network sztauer --name frontend sztauer
+docker run -d -p 421:420 --network sztauer --name backend sztauer
 # frontend → curl http://backend:3000
 ```
 

@@ -3,7 +3,7 @@
 Gotowy obraz Docker dla Claude Code. Jedna komenda:
 
 ```bash
-docker run -d -p 420:420 --network sztauer --name myapp sztauer/sandbox
+docker run -d -p 420:420 --network sztauer --name myapp sztauer
 ```
 
 `localhost:420/sztauer` → split screen: VS Code + Claude Code CLI. `localhost:420` → Twoja aplikacja.
@@ -14,7 +14,7 @@ Zero plików, zero kluczy API. Logowanie przez Claude Max przy pierwszym uruchom
 
 ```bash
 # Start:
-docker run -d -p 420:420 --network sztauer --name myapp sztauer/sandbox
+docker run -d -p 420:420 --network sztauer --name myapp sztauer
 
 # Stop:
 docker stop myapp

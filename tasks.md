@@ -24,7 +24,7 @@
 - [ ] **T1.5** Konfiguracja firewall: iptables default-deny + allowlista (Anthropic, npm, PyPI, GitHub, etc.). Ruch w sieci `sztauer` dozwolony.
 - [ ] **T1.6** Healthcheck: sprawdza code-server + web terminal
 - [ ] **T1.7** Sieć `sztauer`: entrypoint tworzy sieć jeśli nie istnieje, kontener dołącza automatycznie
-- [ ] **T1.8** Test: `docker run -d -p 420:420 --network sztauer sztauer/sandbox` → kontener startuje, healthcheck przechodzi, widoczny w sieci dla innych instancji
+- [ ] **T1.8** Test: `docker run -d -p 420:420 --network sztauer sztauer` → kontener startuje, healthcheck przechodzi, widoczny w sieci dla innych instancji
 
 **Kamień milowy:** Kontener działa. Serwisy startują. Firewall aktywny. Jeszcze bez split screen i routingu.
 
@@ -57,7 +57,7 @@
 ## Faza 4 — Publikacja
 
 - [ ] **T4.1** CI/CD: GitHub Actions multi-arch build + push Docker Hub
-- [ ] **T4.2** README: `docker run -d -p 420:420 --network sztauer sztauer/sandbox` → `localhost:420/sztauer` → login → praca
+- [ ] **T4.2** README: `docker run -d -p 420:420 --network sztauer sztauer` → `localhost:420/sztauer` → login → praca
 - [ ] **T4.3** Smoke test end-to-end: docker run → split screen → login → Claude koduje → aplikacja pod `localhost:420`. <2 minuty.
 
 **Kamień milowy:** Obraz na Docker Hub. Jedna komenda od zera do gotowego środowiska.
