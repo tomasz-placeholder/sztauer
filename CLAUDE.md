@@ -23,11 +23,15 @@ PROJECT_NAME=myapp docker compose down -v
 ## Struktura repo (kod źródłowy obrazu)
 
 ```
-Dockerfile                      — obraz: Claude Code + edytor + firewall
-entrypoint.sh                   — auto-detection capabilities w runtime
-compose.yml                     — template dla użytkownika
-infra.yml                       — reverse proxy + sieć współdzielona
+Dockerfile                      — obraz: code-server + Claude Code + iptables firewall
+entrypoint.sh                   — walidacja env, firewall, git detection, start edytora
+port-router.js                  — HTTP/WS proxy dla dynamicznych subdomen portów
+allowlist.txt                   — domeny dozwolone przez firewall
+compose.yml                     — template dla użytkownika (parametryzowany PROJECT_NAME)
+compose.gpu.yml                 — override: GPU passthrough
+infra.yml                       — Traefik reverse proxy + sieć współdzielona
 .env.example                    — wymagane zmienne środowiskowe
+.github/workflows/build.yml     — CI/CD: multi-arch build + push Docker Hub
 docs/                           — VISION, ARCHITECTURE, SPEC, UI
 ```
 
@@ -62,17 +66,15 @@ docs/                           — VISION, ARCHITECTURE, SPEC, UI
 - Custom CLI wrapper — interfejsem jest `docker compose`
 - Build wymagany od użytkownika — obraz gotowy na Docker Hub
 
-## Decyzje techniczne do podjęcia w trakcie implementacji
+## Podjęte decyzje techniczne
 
-Poniższe nie są z góry narzucone — wybierz najlepsze rozwiązanie w danym kontekście:
-
-- Konkretny edytor webowy (code-server, OpenVSCode Server, Theia — co najlepiej pasuje)
-- Porty wewnętrzne serwisów
-- Konkretny reverse proxy (Traefik, Caddy, nginx — co najprościej rozwiąże routing z autodiscovery)
-- Bazowy obraz Docker (node:20, debian, ubuntu — co najlepiej wspiera Claude Code)
-- Mechanizm dynamicznych portów (docker labels, regex routing, sidecar)
-- Jakie capabilities wykrywać w entrypoincie vs. przez compose profiles
-- CI/CD do budowania i publikacji obrazu (GitHub Actions, inne)
+- **Edytor webowy:** code-server (port 8080) — prosty install, VS Code w przeglądarce
+- **Reverse proxy:** Traefik v3 — natywny Docker provider, autodiscovery przez labele
+- **Bazowy obraz:** node:20-bookworm — Node.js wymagany przez Claude Code
+- **Firewall:** iptables default-deny + DNS resolution allowlisty w entrypoincie. `cap_add: NET_ADMIN`
+- **Dynamiczne porty:** port-router.js (Node.js HTTP/WS proxy, port 9091). Traefik kieruje `{name}-{port}.localhost` do niego
+- **GPU:** compose override (`compose.gpu.yml`) zamiast profili
+- **CI/CD:** GitHub Actions z docker/build-push-action, multi-arch via QEMU
 
 ## Kontekst
 

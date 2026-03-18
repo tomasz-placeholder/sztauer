@@ -1,0 +1,25 @@
+name: sztauer-infra
+
+services:
+  proxy:
+    image: traefik:v3.3
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=sztauer-proxy"
+      - "--entrypoints.web.address=:80"
+      - "--log.level=WARN"
+    ports:
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - proxy
+    restart: always
+    labels:
+      sztauer: "true"
+      sztauer.role: "proxy"
+
+networks:
+  proxy:
+    name: sztauer-proxy
