@@ -9,22 +9,25 @@
 
 - **Edytor:** code-server (port wewnętrzny) — VS Code w przeglądarce
 - **Bazowy obraz:** debian:bookworm-slim — Claude Code przez natywny installer, Node osobno
+- **Web terminal:** ttyd — binarny C, zero deps runtime, xterm.js frontend
 - **Firewall:** iptables default-deny + allowlista
 - **Port kontenera:** 420
 - **Auth:** Claude Max OAuth (nie API key)
+- **Dockerfile:** multi-stage build (builder → slim final)
 
 ---
 
 ## Faza 1 — Obraz bazowy
 
-- [ ] **T1.1** Dockerfile: debian:bookworm-slim + Claude Code CLI (natywny installer) + node + code-server + web terminal + reverse proxy + iptables
-- [ ] **T1.2** Entrypoint: start firewall → proxy → code-server → web terminal → workspace init
-- [ ] **T1.3** Konfiguracja code-server: `--auth none`, `--disable-getting-started-override`, workspace = `~`, pre-installed pluginy, settings.json
-- [ ] **T1.4** Konfiguracja Claude Code: dangerous mode, max thinking budget, max research effort
-- [ ] **T1.5** Konfiguracja firewall: iptables default-deny + allowlista (Anthropic, npm, PyPI, GitHub, etc.). Ruch w sieci `sztauer` dozwolony.
-- [ ] **T1.6** Healthcheck: sprawdza code-server + web terminal
-- [ ] **T1.7** Sieć `sztauer`: entrypoint tworzy sieć jeśli nie istnieje, kontener dołącza automatycznie
-- [ ] **T1.8** Test: `docker run -d -p 420:420 --network sztauer sztauer` → kontener startuje, healthcheck przechodzi, widoczny w sieci dla innych instancji
+- [ ] **T1.1** Dockerfile multi-stage: builder (kompilacja ttyd, code-server, extensions) → final (debian:bookworm-slim + runtime deps)
+- [ ] **T1.2** Claude Code CLI: natywny installer. Jeśli segfault na AMD64 (#12044) → fallback npm install.
+- [ ] **T1.3** Entrypoint: start firewall → proxy → code-server → ttyd → workspace init
+- [ ] **T1.4** Konfiguracja code-server: `--auth none`, `--disable-getting-started-override`, workspace = `~`, pre-installed pluginy, settings.json
+- [ ] **T1.5** Konfiguracja Claude Code: dangerous mode, max thinking budget, max research effort
+- [ ] **T1.6** Konfiguracja firewall: iptables default-deny + allowlista (Anthropic, npm, PyPI, GitHub, etc.). Ruch w sieci `sztauer` dozwolony.
+- [ ] **T1.7** Healthcheck: sprawdza code-server + ttyd
+- [ ] **T1.8** Sieć `sztauer`: entrypoint tworzy sieć jeśli nie istnieje, kontener dołącza automatycznie
+- [ ] **T1.9** Test: `docker run -d -p 420:420 --network sztauer sztauer` → kontener startuje, healthcheck przechodzi, widoczny w sieci dla innych instancji
 
 **Kamień milowy:** Kontener działa. Serwisy startują. Firewall aktywny. Jeszcze bez split screen i routingu.
 
@@ -33,9 +36,9 @@
 ## Faza 2 — Split screen i routing
 
 - [ ] **T2.1** Reverse proxy wewnętrzny: `/sztauer*` → workspace serwisy, `/` → port aplikacji
-- [ ] **T2.2** Strona split screen (`/sztauer`): HTML + CSS grid 50/50. Lewy iframe: code-server. Prawy iframe: web terminal.
+- [ ] **T2.2** Strona split screen (`/sztauer`): HTML + CSS grid 50/50. Lewy iframe: code-server. Prawy iframe: ttyd.
 - [ ] **T2.3** code-server pod `/sztauer/editor` — poprawne base URL, assets, WebSocket
-- [ ] **T2.4** Web terminal pod `/sztauer/terminal` — uruchamia `claude --dangerously-skip-permissions`
+- [ ] **T2.4** ttyd pod `/sztauer/terminal` — uruchamia `claude --dangerously-skip-permissions`
 - [ ] **T2.5** Port aplikacji: `/` → wewnętrzny port (np. 3000). Placeholder gdy nic nie nasłuchuje.
 - [ ] **T2.6** Test: `localhost:420/sztauer` → split screen działa. `localhost:420` → placeholder. Claude Code stawia serwer → `localhost:420` serwuje aplikację.
 

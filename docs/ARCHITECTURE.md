@@ -6,7 +6,7 @@
 port 420 (jedyny eksponowany)
 ├── /sztauer          → split-screen/index.html
 ├── /sztauer/editor   → code-server (wewnętrzny port)
-├── /sztauer/terminal → web terminal (wewnętrzny port)
+├── /sztauer/terminal → ttyd (wewnętrzny port)
 └── /*                → port aplikacji użytkownika (jeśli nasłuchuje) | placeholder
 ```
 
@@ -16,7 +16,7 @@ Wewnętrzny reverse proxy nasłuchuje na 420. Routuje `/sztauer*` do workspace. 
 
 ```
 ┌────────────────────────────┬────────────────────────────┐
-│  code-server               │  web terminal              │
+│  code-server               │  ttyd                      │
 │  --auth none               │  claude --dangerously-     │
 │  --disable-getting-        │    skip-permissions        │
 │    started-override        │                            │
@@ -34,7 +34,7 @@ HTML + CSS grid. Dwa iframe'y. Oba operują na `~` (katalog domowy).
 
 Claude Max OAuth — nie ANTHROPIC_API_KEY.
 
-1. Kontener startuje → web terminal uruchamia `claude --dangerously-skip-permissions`.
+1. Kontener startuje → ttyd uruchamia `claude --dangerously-skip-permissions`.
 2. Claude CLI wyświetla link OAuth.
 3. Użytkownik klika, loguje się w przeglądarce.
 4. Token zapisany w `~/.claude/` → kolejne starty bez logowania.
@@ -47,7 +47,7 @@ Claude Max OAuth — nie ANTHROPIC_API_KEY.
 2. Sieć        → docker network create sztauer (jeśli nie istnieje)
 3. Proxy       → reverse proxy na porcie 420
 4. code-server → wewnętrzny port, workspace = ~/
-5. Terminal    → wewnętrzny port, uruchamia claude CLI
+5. ttyd        → wewnętrzny port, uruchamia claude CLI
 6. Workspace   → jeśli brak ~/CLAUDE.md → kopiuje z template
 ```
 
@@ -84,6 +84,17 @@ Claude Code stawia `python3 -m http.server 3000` → natychmiast widoczne pod `l
 - Sieć: `sztauer`, inne instancje dostępne po `--name` (np. `curl http://backend:3000`)
 - Firewall: default-deny, allowlista. Ruch w sieci `sztauer` dozwolony.
 
+## Obraz — strategia lekkości
+
+Multi-stage build:
+- **Stage 1 (builder):** pełny toolchain — kompilacja ttyd, instalacja code-server, build extensions
+- **Stage 2 (final):** `debian:bookworm-slim` — kopiuje gotowe binarki, minimalne runtime deps
+
+Claude Code: natywny installer (`curl -fsSL https://claude.ai/install.sh | bash`).
+Znany risk: segfault na AMD64 Bookworm (issue #12044). Fallback: `npm install -g @anthropic-ai/claude-code`.
+
+Node.js: instalowany osobno (nodesource) — potrzebny dla code-server i projektów użytkownika, nie jako zależność Claude Code.
+
 ## Multi-machine
 
 Ten sam obraz (multi-arch). Ta sama komenda. Logowanie na każdej maszynie raz. Token w volume.
@@ -96,27 +107,3 @@ Ten sam obraz (multi-arch). Ta sama komenda. Logowanie na każdej maszynie raz. 
 4. Claude Code: dangerous mode, max effort/thinking.
 5. Kontener nie modyfikuje plików poza `~/` i swoimi volumes.
 6. Każdy kontener w sieci `sztauer`.
-
-## Struktura repo
-
-```
-Dockerfile                          — obraz
-entrypoint.sh                       — start serwisów
-config/
-├── code-server/
-│   ├── settings.json               — VS Code settings
-│   └── extensions.txt              — pluginy
-├── claude/
-│   └── settings.json               — Claude Code config
-├── proxy/                          — reverse proxy config
-└── firewall/
-    └── allowlist.txt               — dozwolone domeny
-split-screen/
-└── index.html                      — strona split screen
-workspace-template/
-└── CLAUDE.md                       — instrukcje dla Claude Code w instancji
-compose.yml                         — template: multi-project (opcjonalny)
-compose.gpu.yml                     — override: GPU (opcjonalny)
-infra.yml                           — template: subdomeny (opcjonalny)
-.github/workflows/build.yml         — CI/CD
-```

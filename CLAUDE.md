@@ -88,15 +88,17 @@ docs/                               — VISION, ARCHITECTURE, SPEC, UI
 - **Firewall:** iptables default-deny + allowlista. `cap_add: NET_ADMIN`
 - **Port kontenera:** 420 (wewnętrzny i domyślny zewnętrzny)
 - **Autentykacja:** Claude Max OAuth (token w `~/.claude/`)
+- **Web terminal:** ttyd — mały binarny C, zero zależności runtime, xterm.js frontend
+- **Dockerfile:** multi-stage build — build tools w pierwszym stage, lekki finalny obraz
 
 ## Decyzje do podjęcia w trakcie implementacji
 
-- Web terminal: ttyd, xterm.js, gotty — co najprościej osadzić w iframe
 - Reverse proxy wewnętrzny: Caddy, nginx — co najlżejsze dla routingu ścieżek
 - Dynamiczny port aplikacji: jak wykrywać na jakim porcie nasłuchuje aplikacja użytkownika
 - Lista pluginów VS Code do pre-install
 - Lista ustawień VS Code (theme, font, etc.)
 - Dokładna konfiguracja Claude Code CLI (flagi, env vars, settings.json)
+- Natywny installer Claude Code: znany segfault na AMD64 Debian Bookworm (github.com/anthropics/claude-code/issues/12044). Fallback: npm install.
 
 ## Kontekst
 
