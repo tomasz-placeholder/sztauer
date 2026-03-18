@@ -1,214 +1,122 @@
 # Architektura — Sztauer
 
-## Zasada naczelna
-
-Jedna komenda. Zero konfiguracji. Otwierasz przeglądarkę — masz gotowe środowisko pracy z Claude Code. Port główny wolny na Twoją aplikację.
-
 ## Routing wewnątrz kontenera
 
 ```
-localhost:420
-├── /sztauer          → split screen: VS Code + Claude Code CLI
-├── /sztauer/editor   → code-server (wewnętrzny)
-├── /sztauer/terminal → web terminal z Claude Code (wewnętrzny)
-└── /                 → wolny — to co Claude Code postawi (app, API, dashboard)
+port 420 (jedyny eksponowany)
+├── /sztauer          → split-screen/index.html
+├── /sztauer/editor   → code-server (wewnętrzny port)
+├── /sztauer/terminal → web terminal (wewnętrzny port)
+└── /*                → port aplikacji użytkownika (jeśli nasłuchuje) | placeholder
 ```
 
-Wewnętrzny reverse proxy (np. Caddy/nginx) nasłuchuje na porcie 420 i routuje:
-- `/sztauer*` → workspace UI (split screen, code-server, terminal)
-- Wszystko inne → port aplikacji wewnątrz kontenera (np. 3000, 5173, 8000 — konfigurowalne)
-
-## Obraz
-
-### Co zawiera
-
-- **Claude Code CLI** — zainstalowany, skonfigurowany na dangerous mode + max effort/thinking
-- **code-server** — VS Code w przeglądarce, bez welcome screen, pre-konfigurowany
-- **Web terminal** — przeglądarkowy terminal z uruchomionym Claude Code
-- **Firewall** — iptables default-deny, allowlista domen
-- **Reverse proxy** — routing ścieżek wewnątrz kontenera
-- **Narzędzia** — git, node, python, etc.
-- **Domyślny CLAUDE.md** — instrukcje dla Claude Code o środowisku
-
-### Autentykacja — Claude Max
-
-Sztauer nie używa ANTHROPIC_API_KEY. Autentykacja przez Claude Max:
-
-1. Użytkownik uruchamia kontener (`docker run`).
-2. Otwiera `localhost:420/sztauer` — split screen.
-3. W terminalu (prawa kolumna) Claude Code prosi o zalogowanie.
-4. Użytkownik klika link, loguje się w przeglądarce.
-5. Token zapisywany w volume → kolejne uruchomienia bez logowania.
-
-Volume na token: `~/.claude/` wewnątrz kontenera → named volume lub bind mount.
-
-### Entrypoint
-
-Entrypoint startuje wszystkie serwisy:
-
-1. **Firewall** — konfiguruje iptables z allowlistą.
-2. **Reverse proxy** — startuje routing wewnętrzny.
-3. **code-server** — startuje na wewnętrznym porcie, workspace = domowy katalog.
-4. **Web terminal** — startuje na wewnętrznym porcie, uruchamia Claude Code CLI.
-5. **Workspace init** — jeśli brak CLAUDE.md → tworzy domyślny z informacjami o środowisku.
-
-Nie waliduje API key (bo go nie ma). Fail-fast tylko na brakujących zależnościach wewnętrznych.
+Wewnętrzny reverse proxy nasłuchuje na 420. Routuje `/sztauer*` do workspace. Wszystko inne → port aplikacji. Jeśli nic nie nasłuchuje → statyczny placeholder.
 
 ## Split screen: `/sztauer`
 
 ```
-┌─────────────────────────────────┬─────────────────────────────────┐
-│                                 │                                 │
-│  VS Code (code-server)          │  Claude Code CLI (web terminal) │
-│                                 │                                 │
-│  - Bez welcome screen           │  - Dangerous mode               │
-│  - Folder: ~/                   │  - Max thinking budget          │
-│  - Pre-installed plugins        │  - Max effort                   │
-│  - Pre-configured settings      │  - Max research                 │
-│  - Gotowy do pracy              │  - Folder: ~/                   │
-│                                 │                                 │
-└─────────────────────────────────┴─────────────────────────────────┘
-         50%                                   50%
+┌────────────────────────────┬────────────────────────────┐
+│  code-server               │  web terminal              │
+│  --auth none               │  claude --dangerously-     │
+│  --disable-getting-        │    skip-permissions        │
+│    started-override        │                            │
+│  workspace: ~/             │  thinking: max             │
+│  pre-installed extensions  │  research: thorough        │
+│  pre-configured settings   │  folder: ~/                │
+│                            │                            │
+└────────────────────────────┴────────────────────────────┘
+              50%                         50%
 ```
 
-Strona HTML z CSS grid. Dwa iframe'y (lub embedy) obok siebie. Oba operują na tym samym katalogu domowym.
+HTML + CSS grid. Dwa iframe'y. Oba operują na `~` (katalog domowy).
 
-### code-server — konfiguracja
+## Autentykacja
 
-- `--auth none` — brak hasła (dostęp lokalny)
-- `--disable-getting-started-override` — bez welcome
-- Workspace: katalog domowy (`~`)
-- Pre-installed extensions (lista w Dockerfile)
-- Pre-configured `settings.json` (theme, font, minimap off, etc.)
+Claude Max OAuth — nie ANTHROPIC_API_KEY.
 
-### Web terminal — konfiguracja
+1. Kontener startuje → web terminal uruchamia `claude --dangerously-skip-permissions`.
+2. Claude CLI wyświetla link OAuth.
+3. Użytkownik klika, loguje się w przeglądarce.
+4. Token zapisany w `~/.claude/` → kolejne starty bez logowania.
+5. Persystencja: named volume lub bind mount na `~/.claude/`.
 
-- Terminal webowy (ttyd, xterm.js, lub podobny)
-- Automatycznie uruchamia: `claude --dangerously-skip-permissions`
-- Konfiguracja Claude Code:
-  - Thinking budget: max
-  - Research effort: max (thorough)
-  - Verbose mode
-- Folder roboczy: katalog domowy (`~`) — ten sam co code-server
-
-## Port aplikacji
-
-`localhost:420/` (root) jest wolny. Reverse proxy domyślnie proxuje root do wewnętrznego portu aplikacji (np. 3000). Gdy Claude Code postawi serwer — jest natychmiast widoczny.
-
-Logika: reverse proxy sprawdza czy port aplikacji nasłuchuje. Jeśli tak → proxy. Jeśli nie → strona informacyjna ("Twoja aplikacja tu się pojawi").
-
-## Domyślny CLAUDE.md
-
-Każda nowa instancja dostaje `~/CLAUDE.md` z informacjami:
-
-- Gdzie jesteś: kontener Docker Sztauer
-- Twój workspace: `~/` (katalog domowy)
-- Dostępne narzędzia: node, python, git, etc.
-- Port aplikacji: wszystko co wystawisz na wewnętrznym porcie będzie widoczne pod `localhost:420`
-- Sieć: jesteś w sieci `sztauer` — inne instancje dostępne po nazwie kontenera (np. `curl http://backend:3000`)
-- Firewall: default-deny, allowlista (lista domen). Ruch w sieci `sztauer` dozwolony.
-- Persystencja: `~/` zamontowane jako volume
-
-## Docker Desktop
-
-- **Czytelna nazwa** — `--name myapp` → widoczne w Docker Desktop.
-- **Healthcheck** — sprawdza czy code-server i terminal działają.
-- **Logi** — przeglądalne przez GUI.
-- **Play/Stop** — zarządzanie przez GUI. Token Claude Max persystowany.
-
-## Multi-machine
+## Entrypoint — sekwencja startowa
 
 ```
-                    ┌──────────────────┐
-                    │  Docker Hub:     │
-                    │  sztauer/sandbox │
-                    └────────┬─────────┘
-                             │
-              ┌──────────────┼──────────────┐
-              ▼              ▼              ▼
-     ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-     │ Workstation   │ │ Laptop       │ │ RPi          │
-     │               │ │              │ │              │
-     │ docker run    │ │ docker run   │ │ docker run   │
-     │ -p 420:420    │ │ -p 420:420   │ │ -p 420:420   │
-     │               │ │              │ │              │
-     │ Login raz     │ │ Login raz    │ │ Login raz    │
-     │ Token w vol   │ │ Token w vol  │ │ Token w vol  │
-     └──────────────┘ └──────────────┘ └──────────────┘
+1. Firewall    → iptables default-deny + allowlista + ruch w sieci sztauer
+2. Sieć        → docker network create sztauer (jeśli nie istnieje)
+3. Proxy       → reverse proxy na porcie 420
+4. code-server → wewnętrzny port, workspace = ~/
+5. Terminal    → wewnętrzny port, uruchamia claude CLI
+6. Workspace   → jeśli brak ~/CLAUDE.md → kopiuje z template
 ```
 
-Ten sam obraz. Ta sama komenda. Logowanie przez przeglądarkę na każdej maszynie (raz). Token persystowany w Docker volume.
+Fail-fast na brakujących zależnościach. Nie waliduje API key (bo go nie ma).
 
 ## Sieć `sztauer`
 
-Każdy kontener Sztauer dołącza do współdzielonej sieci Docker `sztauer`. Sieć tworzona automatycznie przez entrypoint jeśli nie istnieje.
+Każdy kontener dołącza do sieci `sztauer` (bridge, `--attachable`). Docker DNS umożliwia komunikację po nazwie kontenera:
 
 ```
-┌─────────── sieć: sztauer ───────────┐
-│                                      │
-│  ┌──────────┐  ┌──────────┐         │
-│  │ myapp    │  │ backend  │         │
-│  │ :420     │←→│ :420     │         │
-│  └──────────┘  └──────────┘         │
-│                                      │
-│  Kontenery widzą się po nazwie:      │
-│  curl http://backend:3000            │
-│  curl http://myapp:8080              │
-└──────────────────────────────────────┘
+┌─────────── sieć: sztauer ────────────┐
+│                                       │
+│  myapp ←→ backend ←→ database         │
+│  curl http://backend:3000             │
+│                                       │
+└───────────────────────────────────────┘
 ```
 
-Dzięki Docker DNS instancje komunikują się po nazwie kontenera (`--name`). Aplikacja w `myapp` może wywołać API w `backend` przez `http://backend:3000` — bez konfiguracji portów na hoście.
+Entrypoint tworzy sieć jeśli nie istnieje: `docker network create sztauer 2>/dev/null || true`
 
-Sieć jest typu bridge, tworzona z `--attachable` aby kontenery uruchamiane przez `docker run` mogły do niej dołączać (nie tylko compose).
+## Port aplikacji: `/`
 
-Komenda startowa automatycznie dołącza do sieci:
-```bash
-docker run -d -p 420:420 --network sztauer --name myapp sztauer/sandbox
-```
+Root (`localhost:420`) jest wolny. Reverse proxy sprawdza wewnętrzny port aplikacji. Jeśli nasłuchuje → proxy. Jeśli nie → placeholder ("Twoja aplikacja tu się pojawi").
 
-Entrypoint tworzy sieć jeśli nie istnieje:
-```bash
-docker network create sztauer 2>/dev/null || true
-```
+Claude Code stawia `python3 -m http.server 3000` → natychmiast widoczne pod `localhost:420`.
+
+## Domyślny CLAUDE.md (w instancji)
+
+`workspace-template/CLAUDE.md` kopiowany do `~/` przy pierwszym starcie (nie nadpisuje istniejącego). Zawiera:
+
+- Lokalizacja: kontener Docker Sztauer, workspace = `~/`
+- Narzędzia: node, python, git, build-essential
+- Port aplikacji: wystawiasz na dowolnym porcie → widoczne pod `localhost:420`
+- Sieć: `sztauer`, inne instancje dostępne po `--name` (np. `curl http://backend:3000`)
+- Firewall: default-deny, allowlista. Ruch w sieci `sztauer` dozwolony.
+
+## Multi-machine
+
+Ten sam obraz (multi-arch). Ta sama komenda. Logowanie na każdej maszynie raz. Token w volume.
 
 ## Niezmienniki
 
-1. `docker run -p 420:420` wystarczy do działającego środowiska — zero plików, zero env vars.
-2. `/sztauer` to workspace. `/` to aplikacja użytkownika. Nigdy odwrotnie.
-3. Firewall zawsze aktywny, default-deny. Ruch wewnątrz sieci `sztauer` dozwolony.
-4. Claude Code zawsze w dangerous mode z max effort/thinking.
-5. Kontener nie modyfikuje plików poza workspace i swoimi volumes.
-6. Obraz na Docker Hub — użytkownik nie buduje.
-7. Każdy kontener w sieci `sztauer` — instancje widzą się nawzajem po nazwie.
+1. `docker run -p 420:420 --network sztauer` — zero plików, zero env vars.
+2. `/sztauer` = workspace. `/` = aplikacja. Nigdy odwrotnie.
+3. Firewall default-deny. Ruch w sieci `sztauer` dozwolony.
+4. Claude Code: dangerous mode, max effort/thinking.
+5. Kontener nie modyfikuje plików poza `~/` i swoimi volumes.
+6. Każdy kontener w sieci `sztauer`.
 
-## Struktura repozytorium (kod źródłowy obrazu)
+## Struktura repo
 
 ```
-sztauer/
-├── CLAUDE.md                       # konstytucja projektu
-├── Dockerfile                      # obraz publikowany na Docker Hub
-├── entrypoint.sh                   # start serwisów
-├── workspace-template/
-│   └── CLAUDE.md                   # domyślne instrukcje dla Claude Code
-├── config/
-│   ├── code-server/
-│   │   ├── settings.json           # VS Code settings
-│   │   └── extensions.txt          # lista pluginów do pre-install
-│   ├── claude/
-│   │   └── settings.json           # Claude Code config (dangerous, max effort)
-│   ├── proxy/                      # reverse proxy config (routing ścieżek)
-│   └── firewall/
-│       └── allowlist.txt           # dozwolone domeny
-├── split-screen/
-│   └── index.html                  # strona split screen (/sztauer)
-├── compose.yml                     # template: multi-project (opcjonalny)
-├── compose.gpu.yml                 # override: GPU (opcjonalny)
-├── infra.yml                       # template: reverse proxy multi-project (opcjonalny)
-├── .github/workflows/build.yml     # CI/CD
-├── docs/
-│   ├── VISION.md
-│   ├── ARCHITECTURE.md
-│   ├── SPEC.md
-│   └── UI.md
-└── tasks.md
+Dockerfile                          — obraz
+entrypoint.sh                       — start serwisów
+config/
+├── code-server/
+│   ├── settings.json               — VS Code settings
+│   └── extensions.txt              — pluginy
+├── claude/
+│   └── settings.json               — Claude Code config
+├── proxy/                          — reverse proxy config
+└── firewall/
+    └── allowlist.txt               — dozwolone domeny
+split-screen/
+└── index.html                      — strona split screen
+workspace-template/
+└── CLAUDE.md                       — instrukcje dla Claude Code w instancji
+compose.yml                         — template: multi-project (opcjonalny)
+compose.gpu.yml                     — override: GPU (opcjonalny)
+infra.yml                           — template: subdomeny (opcjonalny)
+.github/workflows/build.yml         — CI/CD
 ```

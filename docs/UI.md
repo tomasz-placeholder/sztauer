@@ -1,9 +1,5 @@
 # Interfejs — Sztauer
 
-## Filozofia
-
-Jedna komenda, zero plików. Otwierasz przeglądarkę — masz gotowe środowisko. Port główny wolny na Twoją aplikację.
-
 ## Quick start
 
 ```bash
@@ -31,35 +27,30 @@ localhost:420                  → Twoja aplikacja (to co Claude Code postawi)
 │  - Pre-installed plugins        │  - Max research (thorough)      │
 │  - Skonfigurowany theme/font    │  - Folder: ~/                   │
 │                                 │                                 │
-│  Edytujesz pliki,               │  Wydajesz polecenia,            │
-│  przeglądasz kod                │  Claude koduje                  │
-│                                 │                                 │
 └─────────────────────────────────┴─────────────────────────────────┘
          50%                                   50%
 ```
 
-Oba panele w tym samym katalogu (`~`). Plik stworzony przez Claude → natychmiast widoczny w VS Code.
+## Pierwsze uruchomienie
 
-## Pierwsze uruchomienie — logowanie
-
-1. `docker run -d -p 420:420 --name myapp sztauer/sandbox`
+1. `docker run -d -p 420:420 --network sztauer --name myapp sztauer/sandbox`
 2. Otwórz `localhost:420/sztauer`
 3. W prawym panelu (Claude Code) → link do zalogowania
-4. Kliknij link → zaloguj się kontem Claude Max
-5. Gotowe — token zapamiętany w volume
+4. Kliknij → zaloguj się kontem Claude Max
+5. Token zapamiętany w volume
 
-Kolejne uruchomienia bez logowania (jeśli volume zachowany).
+Kolejne starty bez logowania (jeśli volume zachowany).
 
 ## Opcje docker run
 
 ```bash
-# Podstawowe (zero config):
+# Podstawowe:
 docker run -d -p 420:420 --network sztauer --name myapp sztauer/sandbox
 
-# Z persystentnym workspace:
+# Persystentny workspace:
 docker run -d -p 420:420 --network sztauer -v ~/myapp:/home/coder --name myapp sztauer/sandbox
 
-# Z persystentnym tokenem Claude (przeżyje docker rm):
+# Persystentny token Claude:
 docker run -d -p 420:420 --network sztauer -v claude-token:/home/coder/.claude --name myapp sztauer/sandbox
 
 # Git credentials z hosta:
@@ -79,57 +70,29 @@ docker run -d -p 420:420 --network sztauer --gpus all --name myapp sztauer/sandb
 
 ```bash
 docker stop myapp           # zatrzymaj
-docker start myapp          # wznów (bez ponownego logowania)
+docker start myapp          # wznów
 docker rm -f myapp          # usuń
+docker rm -fv myapp         # usuń z volumes
 docker logs -f myapp        # logi
 docker exec -it myapp bash  # shell
 ```
 
-Albo przez Docker Desktop — play/stop/logs/shell w GUI.
+Albo Docker Desktop: play/stop/logs/shell w GUI.
 
-## Port aplikacji: `localhost:420`
-
-Wszystko co Claude Code postawi na wewnętrznym porcie → natychmiast widoczne pod `localhost:420`.
-
-```
-Claude: "Uruchamiam serwer Next.js na porcie 3000"
-→ localhost:420 serwuje aplikację Next.js
-```
-
-Gdy żadna aplikacja nie nasłuchuje → strona placeholder z informacją.
-
-## Docker Desktop
-
-- **Nazwa kontenera** → `myapp` (z `--name`).
-- **Healthcheck** → widoczny status.
-- **Logi** → przeglądalne przez GUI.
-- **Shell** → dostępny przez GUI.
-- **Play/Stop** → zarządzanie przez GUI.
-
-## Multi-project (opcjonalny)
-
-Wiele projektów jednocześnie — różne porty, wspólna sieć:
+## Multi-project
 
 ```bash
 docker run -d -p 420:420 --network sztauer --name frontend sztauer/sandbox
 docker run -d -p 421:420 --network sztauer --name backend sztauer/sandbox
-# frontend może wywołać backend: curl http://backend:3000
+# frontend → curl http://backend:3000
 ```
 
-Lub compose z subdomenami (template z README):
-
-```bash
-docker compose -f infra.yml up -d
-PROJECT_NAME=myapp docker compose up -d
-# → myapp.localhost/sztauer = workspace
-# → myapp.localhost = aplikacja
-```
+Opcjonalnie: compose z subdomenami (`compose.yml` + `infra.yml` z repo).
 
 ## Czego NIE ma
 
-- **Klucza API.** Logowanie przez Claude Max w przeglądarce.
-- **Plików konfiguracyjnych.** docker run wystarczy.
-- **Custom CLI.** Interfejsem jest Docker.
-- **SSL/TLS.** `.localhost` i `localhost` po HTTP.
-- **Auto-restart.** Kontener nie restartuje się po reboocie.
-- **Multi-user auth.** Jeden użytkownik, wiele maszyn.
+- Klucza API — logowanie przez Claude Max.
+- Plików konfiguracyjnych — docker run wystarczy.
+- Custom CLI — interfejsem jest Docker.
+- SSL/TLS — HTTP na localhost.
+- Auto-restart — kontener nie restartuje się po reboocie.

@@ -1,116 +1,67 @@
 # Specyfikacja — Sztauer
 
-## Użytkownik
+Fazy implementacji z kryteriami akceptacji. Szczegóły techniczne → @docs/ARCHITECTURE.md.
 
-Developer z subskrypcją Claude Max. Chce odpalić izolowane środowisko jedną komendą docker run — bez kluczy API, bez plików, bez konfiguracji. Otwiera przeglądarkę, loguje się raz, pracuje. Efekty pracy Claude'a widoczne pod `localhost:420`.
+## Faza 1 — Obraz bazowy
 
-## Faza 1 — Obraz: kontener z Claude Code
+### F1.1 Dockerfile
+**Akceptacja:** `docker build -t sztauer/sandbox .` buduje obraz. Zawiera: Claude Code CLI, code-server, web terminal, reverse proxy, iptables, git, node, python.
 
-### F1.1 — Dockerfile
+### F1.2 Entrypoint
+**Akceptacja:** Kontener startuje. Firewall aktywny. code-server nasłuchuje. Web terminal nasłuchuje. `~/CLAUDE.md` obecny (jeśli wcześniej nie istniał). Logi czytelne.
 
-Obraz z Claude Code CLI, code-server, web terminal, reverse proxy i firewallem. Bazowy obraz: node:20-bookworm. Multi-arch (amd64 + arm64).
+### F1.3 Autentykacja Claude Max
+**Akceptacja:** Pierwszy start → Claude prosi o login → użytkownik loguje się → token w `~/.claude/`. Restart → Claude działa bez logowania (volume zachowany).
 
-**Akceptacja:** `docker run -d -p 420:420 --network sztauer --name myapp sztauer/sandbox` → kontener startuje. `localhost:420/sztauer` otwiera split screen. Kontener widoczny dla innych instancji po nazwie.
+### F1.4 Firewall
+**Akceptacja:** `curl https://google.com` → zablokowane. `curl https://api.anthropic.com` → przepuszczone. `curl http://inny-kontener:3000` (sieć sztauer) → przepuszczone.
 
-### F1.2 — Entrypoint
+### F1.5 Healthcheck
+**Akceptacja:** `docker ps` pokazuje healthy. Docker Desktop pokazuje status.
 
-Start serwisów: firewall, reverse proxy, code-server, web terminal. Inicjalizacja workspace (domyślny CLAUDE.md jeśli brak).
+### F1.6 Sieć sztauer
+**Akceptacja:** `docker run --network sztauer --name a` + `docker run --network sztauer --name b` → kontener `b` odpowiada na `curl http://b:port` z kontenera `a`.
 
-**Akceptacja:** Po starcie wszystkie serwisy działają. Healthcheck przechodzi. Logi czytelne w Docker Desktop.
+### F1.7 Test integracyjny
+**Akceptacja:** `docker run -d -p 420:420 --network sztauer --name test sztauer/sandbox` → kontener startuje, healthcheck przechodzi w <30s.
 
-### F1.3 — Autentykacja Claude Max
+## Faza 2 — Split screen i routing
 
-Claude Code CLI uruchamia się w web terminalu. Przy pierwszym użyciu wymaga logowania przez przeglądarkę (OAuth). Token persystowany w Docker volume.
+### F2.1 Reverse proxy
+**Akceptacja:** Port 420: `/sztauer` → workspace. `/` → port aplikacji lub placeholder.
 
-**Akceptacja:** Pierwsze uruchomienie → Claude prosi o login → użytkownik loguje się → token zapamiętany. Restart kontenera → Claude działa bez ponownego logowania (jeśli volume zachowany).
+### F2.2 Split screen
+**Akceptacja:** `localhost:420/sztauer` → dwa panele 50/50. Lewy: code-server. Prawy: web terminal z Claude Code. Responsywne.
 
-### F1.4 — Firewall
+### F2.3 code-server
+**Akceptacja:** Lewy panel → VS Code. Brak welcome screen. Explorer: `~/`. Pluginy zainstalowane. Settings skonfigurowane.
 
-iptables default-deny z allowlistą domen. `cap_add: NET_ADMIN` (lub odpowiednik w docker run).
+### F2.4 Web terminal z Claude Code
+**Akceptacja:** Prawy panel → terminal z uruchomionym `claude`. Dangerous mode aktywny. Thinking budget max. Research thorough. Folder = `~/`.
 
-**Akceptacja:** Ruch do domen poza allowlistą blokowany. Ruch do allowlisty (Anthropic, npm, PyPI, GitHub) przepuszczany. Ruch wewnątrz sieci `sztauer` dozwolony.
+### F2.5 Wspólny workspace
+**Akceptacja:** Claude tworzy plik → widoczny w VS Code bez refresha. Edycja w VS Code → Claude widzi.
 
-### F1.5 — Healthcheck
+### F2.6 Port aplikacji
+**Akceptacja:** `python3 -m http.server 3000` wewnątrz kontenera → `localhost:420` serwuje. Przed uruchomieniem → placeholder.
 
-Kontener sprawdza czy code-server i web terminal działają.
+## Faza 3 — Domyślne instrukcje
 
-**Akceptacja:** `docker ps` i Docker Desktop pokazują healthy/unhealthy.
+### F3.1 workspace-template/CLAUDE.md
+**Akceptacja:** Nowy kontener → `~/CLAUDE.md` obecny. Claude Code czyta go. Zawiera: lokalizację, narzędzia, port, sieć, firewall. Kontener z istniejącym `~/CLAUDE.md` → nie nadpisany.
 
-## Faza 2 — Split screen: `/sztauer`
+## Faza 4 — Publikacja
 
-### F2.1 — Strona split screen
+### F4.1 CI/CD
+**Akceptacja:** Push tagu → obraz na Docker Hub. amd64 + arm64.
 
-Strona HTML pod `/sztauer`. CSS grid 50/50. Lewa kolumna: code-server. Prawa kolumna: web terminal z Claude Code.
+### F4.2 README
+**Akceptacja:** Nowy użytkownik: docker run → localhost:420/sztauer → login → praca. <2 minuty.
 
-**Akceptacja:** `localhost:420/sztauer` wyświetla dwa panele obok siebie, każdy zajmuje 50% szerokości. Responsywne — działa na różnych rozdzielczościach.
+### F4.3 Smoke test
+**Akceptacja:** docker run → split screen → Claude koduje → aplikacja pod localhost:420.
 
-### F2.2 — code-server (lewa kolumna)
+## Opcjonalnie — Multi-project
 
-VS Code w przeglądarce. Bez welcome screen. Workspace: katalog domowy. Pre-installed pluginy. Pre-configured settings.
-
-**Akceptacja:** Po otwarciu → pusty edytor gotowy do pracy. Brak ekranu powitalnego. Explorer widzi pliki w `~`. Pluginy zainstalowane (ESLint, Prettier, GitLens — lub inne ustalone w implementacji). Theme, font size, minimap — skonfigurowane.
-
-### F2.3 — Claude Code CLI (prawa kolumna)
-
-Web terminal z uruchomionym Claude Code. Dangerous mode. Max thinking budget. Max research effort.
-
-**Akceptacja:** Po otwarciu → terminal z działającym `claude`. Dangerous mode aktywny (bez pytania o uprawnienia). Thinking budget na max. Research na thorough. Folder roboczy = `~` (ten sam co code-server).
-
-### F2.4 — Wspólny workspace
-
-Oba panele operują na tym samym katalogu domowym (`~`). Pliki tworzone przez Claude Code widoczne natychmiast w VS Code (i odwrotnie).
-
-**Akceptacja:** Claude tworzy plik → widoczny w VS Code bez refresha. Edycja pliku w VS Code → Claude widzi zmiany.
-
-## Faza 3 — Port aplikacji
-
-### F3.1 — Routing wewnętrzny
-
-Reverse proxy na porcie 420. `/sztauer*` → serwisy workspace. `/` → port aplikacji wewnątrz kontenera.
-
-**Akceptacja:** Claude Code uruchamia `python3 -m http.server 3000` → `localhost:420` serwuje odpowiedź. `localhost:420/sztauer` nadal działa jako workspace.
-
-### F3.2 — Domyślna strona
-
-Gdy żadna aplikacja nie nasłuchuje → `/` pokazuje stronę informacyjną ("Twoja aplikacja tu się pojawi" + instrukcje).
-
-**Akceptacja:** Przed uruchomieniem jakiejkolwiek aplikacji → `localhost:420` pokazuje placeholder. Po uruchomieniu serwera → placeholder zastąpiony przez aplikację.
-
-## Faza 4 — Domyślne instrukcje
-
-### F4.1 — Domyślny CLAUDE.md
-
-Każda nowa instancja dostaje `~/CLAUDE.md` z informacjami o środowisku: lokalizacja, dostępne narzędzia, porty, firewall, persystencja.
-
-**Akceptacja:** Nowy kontener z pustym workspace → `~/CLAUDE.md` obecny. Claude Code czyta go automatycznie. Informacje aktualne i przydatne. Jeśli workspace ma już CLAUDE.md → nie nadpisywany.
-
-## Faza 5 — Publikacja
-
-### F5.1 — CI/CD
-
-GitHub Actions: multi-arch build + push na Docker Hub przy tagu.
-
-**Akceptacja:** Push tagu → obraz na Docker Hub dla amd64 i arm64.
-
-### F5.2 — README
-
-Quick start: 1 komenda. Opis co daje. Opis split screen. FAQ (logowanie, persystencja, GPU).
-
-**Akceptacja:** Nowy użytkownik: `docker run` → `localhost:420/sztauer` → login → praca. <2 minuty (bez pull).
-
-## Opcjonalne rozszerzenia (multi-project)
-
-### Compose z subdomenami
-
-Dla wielu projektów jednocześnie — opcjonalny `compose.yml` + `infra.yml`. Subdomeny: `{name}.localhost` → split screen projektu. `{name}-app.localhost` → aplikacja projektu.
-
-Nie jest wymagany. Tryb prosty (`docker run`) jest domyślnym doświadczeniem.
-
-## Wymagania niefunkcjonalne
-
-- **Czas startu:** kontener gotowy w <30 sekund (obraz pobrany).
-- **Zero konfiguracji:** `docker run -p 420:420` wystarczy. Brak env vars, brak plików.
-- **Multi-arch:** amd64 + arm64.
-- **Docker Desktop:** czytelna nazwa, healthcheck, logi.
-- **Bezpieczeństwo:** firewall default-deny. Brak Docker socket.
-- **Persystencja:** token Claude Max w volume. Workspace opcjonalnie w bind mount.
+### F5.1 compose.yml + infra.yml
+**Akceptacja:** Dwa projekty jednocześnie. Subdomeny `{name}.localhost`. Nie wymagane — tryb `docker run` jest domyślny.

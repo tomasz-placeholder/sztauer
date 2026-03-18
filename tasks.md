@@ -57,7 +57,7 @@
 ## Faza 4 — Publikacja
 
 - [ ] **T4.1** CI/CD: GitHub Actions multi-arch build + push Docker Hub
-- [ ] **T4.2** README: `docker run -d -p 420:420 sztauer/sandbox` → `localhost:420/sztauer` → login → praca
+- [ ] **T4.2** README: `docker run -d -p 420:420 --network sztauer sztauer/sandbox` → `localhost:420/sztauer` → login → praca
 - [ ] **T4.3** Smoke test end-to-end: docker run → split screen → login → Claude koduje → aplikacja pod `localhost:420`. <2 minuty.
 
 **Kamień milowy:** Obraz na Docker Hub. Jedna komenda od zera do gotowego środowiska.

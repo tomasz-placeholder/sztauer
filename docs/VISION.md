@@ -13,7 +13,7 @@ Brak gotowego obrazu Docker, który jedną komendą daje gotowe środowisko prac
 Sztauer to obraz Docker. Jedna komenda:
 
 ```bash
-docker run -d -p 420:420 --name myapp sztauer/sandbox
+docker run -d -p 420:420 --network sztauer --name myapp sztauer/sandbox
 ```
 
 Otwierasz `localhost:420/sztauer` — split screen: VS Code po lewej, Claude Code CLI po prawej. Oba w tym samym katalogu. Przy pierwszym uruchomieniu logujesz się przez Claude Max w przeglądarce — token zapamiętany, kolejne starty bez logowania.
