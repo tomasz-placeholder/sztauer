@@ -134,58 +134,167 @@
 
 ---
 
-## Faza 11 — Autonomous Teams (horyzont 5-letni)
+## Faza 11 — Inter-instance Protocol
 
-- [ ] **T11.1** Role instancji: `ROLE=architect|frontend|backend|tester|reviewer` → specjalizowany CLAUDE.md per rola
-- [ ] **T11.2** Shared board: `~/shared/board.json` (volume współdzielony) — zadania, statusy, kontrakty API, decyzje
-- [ ] **T11.3** Message broker: lekki serwis w sieci `sztauer`. Instancje wysyłają/odbierają taski i updates.
-- [ ] **T11.4** Contract-driven dev: Architect definiuje kontrakty (OpenAPI/protobuf) w `~/shared/contracts/`. Inne instancje implementują swoje strony.
-- [ ] **T11.5** Human-as-architect: użytkownik rozmawia z Architect instancją, definiuje wizję. Architect deleguje, koordynuje, eskaluje. Użytkownik reviewuje, nie koduje.
-- [ ] **T11.6** Test end-to-end: użytkownik opisuje app → Architect dzieli na taski → Backend/Frontend implementują → Tester weryfikuje → Reviewer sprawdza → PR do usera. Cały flow bez ludzkiej interwencji poza ostatecznym review.
+- [ ] **T11.1** Format wiadomości JSON: `{from, to, type, payload, timestamp}`. Typy: request, response, event, broadcast.
+- [ ] **T11.2** Event broadcasting: instancja rozgłasza eventy (file-created, service-started) do sieci sztauer
+- [ ] **T11.3** Request/Response: HTTP API na każdej instancji (`POST :420/api/msg`). Timeout + retry.
+- [ ] **T11.4** Test: instancja A wysyła request do B → B odpowiada → A widzi odpowiedź w kontekście Claude Code
 
-**Kamień milowy:** Autonomiczny zespół AI. Użytkownik definiuje wizję, maszyny dostarczają produkt.
+**Kamień milowy:** Instancje mogą się komunikować. Prymityw do budowania zespołów.
 
 ---
 
-## Faza 12 — Self-Improving Platform
+## Faza 12 — Shared State
 
-- [ ] **T12.1** Rola `platform-engineer`: instancja monitorująca repo Sztauer, proponująca ulepszenia (PR-y z optymalizacjami Dockerfile, entrypoint, defaults)
-- [ ] **T12.2** Auto-tuning: analiza logów i metryk → rekomendacje (pakiety do bazowego obrazu, settings defaults, allowlista)
-- [ ] **T12.3** Auto-generowanie templates: po zakończeniu projektu → platform-engineer tworzy template z finalnego stanu workspace
-- [ ] **T12.4** Test: platform-engineer instancja otwiera PR do repo Sztauer z uzasadnioną zmianą. Zmiana przechodzi review.
+- [ ] **T12.1** Volume `sztauer-shared` montowany w `~/shared/` we wszystkich instancjach
+- [ ] **T12.2** Współdzielone repo git w `~/shared/repo/` (bare repo jako volume)
+- [ ] **T12.3** Lock protocol: `~/shared/.locks/` — blokowanie plików, automatyczny unlock po timeout
+- [ ] **T12.4** Test: instancja A zapisuje plik → instancja B widzi go natychmiast. Dwie instancje nie nadpisują tego samego pliku jednocześnie.
 
-**Kamień milowy:** Platforma ulepsza samą siebie. Szablony ewoluują z realnych projektów.
-
----
-
-## Faza 13 — Distributed Compute
-
-- [ ] **T13.1** Discovery maszyn w sieci lokalnej (mDNS/Bonjour). Maszyny z Sztauer widzą się automatycznie.
-- [ ] **T13.2** Resource pooling: łączne zasoby klastra (CPU/RAM/GPU). Dashboard pokazuje klaster jako całość.
-- [ ] **T13.3** Routing zadań: GPU-heavy → workstation, lekkie → dowolna wolna maszyna. Automatyczne, bez konfiguracji.
-- [ ] **T13.4** Work migration: instancja deleguje build do innej maszyny po wykryciu lepszych zasobów w sieci.
-- [ ] **T13.5** Test: laptop + workstation w jednej sieci. Build z GPU uruchomiony na laptopie → automatycznie zdelegowany do workstationa.
-
-**Kamień milowy:** Klaster domowych maszyn jako jeden pool zasobów. Praca podąża za zasobami.
+**Kamień milowy:** Instancje współdzielą stan. Fundament koordynacji.
 
 ---
 
-## Faza 14 — Persistent AI Memory
+## Faza 13 — Autonomous Teams
 
-- [ ] **T14.1** Cross-project knowledge: indeksowane embeddingi z poprzednich projektów w `~/.sztauer/memory/`. Nowy projekt Next.js → automatycznie ładuje patterns z poprzednich.
-- [ ] **T14.2** Personal coding style: system uczy się preferencji (naming, architektura, narzędzia). Nowa instancja zna styl bez CLAUDE.md.
-- [ ] **T14.3** Organizational knowledge base: współdzielona baza wiedzy między instancjami (API patterns, deployment procedures, troubleshooting).
-- [ ] **T14.4** Test: nowy projekt w stacku, w którym użytkownik pracował wcześniej → Claude Code od startu stosuje poznane wzorce bez ręcznych instrukcji.
+- [ ] **T13.1** Role: `ROLE=architect|frontend|backend|tester|reviewer` → specjalizowany CLAUDE.md per rola
+- [ ] **T13.2** Shared board: `~/shared/board.json` — zadania, statusy, kontrakty, decyzje (lock protocol z F12)
+- [ ] **T13.3** Contract-driven dev: Architect → kontrakty w `~/shared/contracts/`. Inne instancje implementują.
+- [ ] **T13.4** Human-as-architect: użytkownik ↔ Architect. Architect deleguje reszcie.
+- [ ] **T13.5** Test end-to-end: opis app → Architect → Backend/Frontend → Tester → Reviewer → PR. Bez interwencji.
 
-**Kamień milowy:** AI z pamięcią długoterminową. Każdy następny projekt korzysta z wiedzy poprzednich.
+**Kamień milowy:** Autonomiczny zespół AI.
 
 ---
 
-## Faza 15 — Full Product Lifecycle
+## Faza 14 — Team Analytics
 
-- [ ] **T15.1** Idea → Production: jedno zdanie → team topology → architektura → implementacja → testy → staging deploy. Użytkownik widzi działającą aplikację.
-- [ ] **T15.2** Continuous autonomous iteration: Tester monitoruje staging → wykrywa bugi → issue → fix → review → auto-deploy. Cykl bez interwencji (z opcją veto).
-- [ ] **T15.3** Multi-product management: portfel produktów w dashboardzie. Statusy, metryki, aktywne prace. Użytkownik = CEO, nie programista.
-- [ ] **T15.4** Test end-to-end: "Zbuduj mi SaaS do zarządzania fakturami" → po 24h działająca aplikacja na staging z auth, CRUD, dashboardem, testami, CI/CD.
+- [ ] **T14.1** Metryki per instancja: czas na task, iteracje, testy pass/fail, rozmiar zmian. Logi w `~/shared/metrics/`
+- [ ] **T14.2** Bottleneck detection: identyfikacja wąskich gardeł w pipeline zespołu
+- [ ] **T14.3** Quality scoring: automatyczny scoring jakości per rola (coverage, lint, review iterations)
+- [ ] **T14.4** Test: dashboard wizualizuje metryki 3 instancji. Bottleneck wykryty i zasygnalizowany Architectowi.
 
-**Kamień milowy:** Od pomysłu do działającego produktu bez pisania kodu. Użytkownik zarządza portfelem produktów.
+**Kamień milowy:** Zespół mierzalny. Architect podejmuje decyzje na danych.
+
+---
+
+## Faza 15 — Playbooks & Recipes
+
+- [ ] **T15.1** Format playbook: markdown w `~/shared/playbooks/`. Opis sprawdzonego wzorca (np. "jak budujemy REST API")
+- [ ] **T15.2** Auto-generowanie: po udanym projekcie → system generuje playbook z historii board + git
+- [ ] **T15.3** Playbook library: wbudowane (rest-api, nextjs-app, cli-tool) + community z GitHub
+- [ ] **T15.4** Test: Architect przypisuje playbook do zadania → instancja wykonawcza czyta i stosuje wzorzec
+
+**Kamień milowy:** Wiedza zespołowa zakodowana w reusable recipes.
+
+---
+
+## Faza 16 — Self-Improving Platform
+
+- [ ] **T16.1** Rola `platform-engineer`: monitoruje repo Sztauer, proponuje PR-y z ulepszeniami
+- [ ] **T16.2** Auto-tuning: metryki (F14) → rekomendacje (pakiety, defaults, allowlista)
+- [ ] **T16.3** Template + playbook generation z realnych projektów
+- [ ] **T16.4** Test: platform-engineer otwiera PR z uzasadnioną zmianą. Zmiana przechodzi review.
+
+**Kamień milowy:** Platforma ulepsza samą siebie.
+
+---
+
+## Faza 17 — Build Cache & Artifacts
+
+- [ ] **T17.1** Współdzielony cache: npm, pip, Docker layers w volume `sztauer-cache`
+- [ ] **T17.2** Lokalny artifact registry w sieci sztauer. Instancje publikują/pobierają artefakty.
+- [ ] **T17.3** Incremental builds: cache-aware, tylko affected testy i buildy po zmianie
+- [ ] **T17.4** Test: drugie `npm install` tego samego pakietu → instant. Build po zmianie 1 pliku → tylko affected.
+
+**Kamień milowy:** Zero redundancji. Buildy szybkie jak pamięć cache pozwala.
+
+---
+
+## Faza 18 — Resource Awareness
+
+- [ ] **T18.1** Resource reporting: CPU, RAM, GPU, disk I/O per instancja. Dane w API lub shared volume.
+- [ ] **T18.2** Resource requests: instancja deklaruje potrzeby. System alokuje lub kolejkuje.
+- [ ] **T18.3** Graceful degradation: proaktywne zarządzanie przed OOM. Compaction, cleanup, warning.
+- [ ] **T18.4** Test: instancja bliska limitu RAM → automatyczna reakcja zamiast OOM-kill.
+
+**Kamień milowy:** Instancje świadome swoich zasobów. Fundament distributed compute.
+
+---
+
+## Faza 19 — Distributed Compute
+
+- [ ] **T19.1** mDNS/Bonjour discovery maszyn w sieci lokalnej
+- [ ] **T19.2** Resource pooling: łączne zasoby klastra. Dashboard pokazuje klaster jako całość.
+- [ ] **T19.3** Routing zadań: GPU-heavy → workstation, lekkie → wolna maszyna
+- [ ] **T19.4** Work migration: instancja deleguje build do maszyny z lepszymi zasobami
+- [ ] **T19.5** Test: laptop + workstation. GPU build na laptopie → delegowany do workstationa.
+
+**Kamień milowy:** Klaster domowych maszyn. Praca podąża za zasobami.
+
+---
+
+## Faza 20 — Session Recording
+
+- [ ] **T20.1** Zapis sesji Claude Code: prompty, odpowiedzi, komendy, wyniki. JSONL w `~/.sztauer/recordings/`
+- [ ] **T20.2** Annotacje: użytkownik/Reviewer ocenia decyzje ("dobra", "zła", "lepiej byłoby...")
+- [ ] **T20.3** Pattern extraction: analiza nagrań → powtarzające się wzorce → kandydaci na playbooki
+- [ ] **T20.4** Test: 10 nagranych sesji → system identyfikuje 3 powtarzające się wzorce
+
+**Kamień milowy:** Surowy materiał do uczenia. Każda sesja to data point.
+
+---
+
+## Faza 21 — Context Handoff
+
+- [ ] **T21.1** Session summary: instancja generuje markdown podsumowanie (co zrobiła, decyzje, TODO, problemy)
+- [ ] **T21.2** Seamless handoff: A kończy → generuje handoff → B startuje z handoffem jako kontekstem
+- [ ] **T21.3** Cross-role handoff: Backend → Tester ("zaimplementowałem X, oto edge cases do sprawdzenia")
+- [ ] **T21.4** Test: handoff z Backendu do Testera → Tester pisze testy bez odpytywania Backendu
+
+**Kamień milowy:** Czyste przekazywanie pałeczki. Zero utraconej wiedzy.
+
+---
+
+## Faza 22 — Persistent AI Memory
+
+- [ ] **T22.1** Cross-project knowledge: embeddingi w `~/.sztauer/memory/`. Nowy Next.js → patterns z poprzednich.
+- [ ] **T22.2** Personal coding style: preferencje użytkownika (naming, architektura). Nowa instancja zna styl.
+- [ ] **T22.3** Organizational knowledge base: współdzielona baza (API patterns, deployment, troubleshooting)
+- [ ] **T22.4** Test: nowy projekt w znanym stacku → Claude stosuje poznane wzorce bez instrukcji
+
+**Kamień milowy:** AI z pamięcią. Każdy projekt korzysta z wiedzy poprzednich.
+
+---
+
+## Faza 23 — Deployment Pipeline
+
+- [ ] **T23.1** Staging: Claude tworzy Dockerfile + compose → deploy → `staging-{name}.localhost`. Auto-cleanup 24h.
+- [ ] **T23.2** Preview deploys: każdy PR → automatyczny preview. Reviewer widzi działającą app.
+- [ ] **T23.3** Rollback: one-command przywrócenie poprzedniej wersji. Historia deployów.
+- [ ] **T23.4** Test: PR → preview deploy → Reviewer testuje w przeglądarce → merge → staging update
+
+**Kamień milowy:** Kod → działająca aplikacja automatycznie. Reviewer testuje produkt, nie diff.
+
+---
+
+## Faza 24 — Feedback Integration
+
+- [ ] **T24.1** Bug reporting: użytkownik zgłasza bug → task na board. Claude dostaje kontekst (opis, logi, screenshot).
+- [ ] **T24.2** Usage analytics: staging zbiera metryki użytkowania. Dane jako kontekst dla instancji.
+- [ ] **T24.3** Autonomous fix loop: bug → reprodukcja → fix → review → deploy → weryfikacja. Bez interwencji poza weryfikacją.
+- [ ] **T24.4** Test: bug report → fix deployed na staging w <1h bez ludzkiej interwencji
+
+**Kamień milowy:** Feedback loop zamknięty. Bugi fixują się (prawie) same.
+
+---
+
+## Faza 25 — Full Product Lifecycle
+
+- [ ] **T25.1** Idea → Production: jedno zdanie → team topology → architektura → implementacja → testy → staging
+- [ ] **T25.2** Continuous autonomous iteration: monitoring → bugi → fix → deploy. Cykl bez interwencji (z opcją veto).
+- [ ] **T25.3** Multi-product management: portfel produktów w dashboardzie. Użytkownik = CEO.
+- [ ] **T25.4** Test: "Zbuduj SaaS do faktur" → 24h → działająca app z auth, CRUD, dashboard, testy, CI/CD.
+
+**Kamień milowy:** Od pomysłu do produktu bez pisania kodu. Użytkownik zarządza portfelem.

@@ -121,63 +121,170 @@ Fazy implementacji z kryteriami akceptacji. Szczegóły techniczne → @docs/ARC
 ### F10.4 Plugin hooks
 **Akceptacja:** Plugin może definiować hooki: `on-start.sh` (po starcie kontenera), `on-file-change.sh` (po modyfikacji pliku), `on-service-start.sh` (po uruchomieniu serwisu). Hooki uruchamiane przez entrypoint.
 
-## Faza 11 — Autonomous Teams (horyzont 5-letni)
+## Faza 11 — Inter-instance Protocol
 
-### F11.1 Rola instancji
-**Akceptacja:** Env var `ROLE=architect|frontend|backend|tester|reviewer`. Każda rola dostaje specjalizowany CLAUDE.md z instrukcjami odpowiednimi do roli. Architect planuje, dzieli zadania na konktrakty. Frontend/Backend implementują. Tester pisze i uruchamia testy. Reviewer robi code review.
+### F11.1 Format wiadomości
+**Akceptacja:** Standardowy JSON format wiadomości między instancjami: `{from, to, type, payload, timestamp}`. Typy: `request`, `response`, `event`, `broadcast`. Wysyłanie przez HTTP w sieci `sztauer`.
 
-### F11.2 Shared project board
-**Akceptacja:** Plik `~/shared/board.json` zamontowany jako volume współdzielony między instancjami. Zawiera: lista zadań, statusy, kontrakty API, decyzje architektoniczne. Każda instancja czyta i aktualizuje board.
+### F11.2 Event broadcasting
+**Akceptacja:** Instancja rozgłasza eventy (`file-created`, `service-started`, `test-passed`) do wszystkich instancji w sieci. Odbiór opcjonalny — instancja subskrybuje typy eventów które ją interesują.
 
-### F11.3 Inter-instance messaging
-**Akceptacja:** Instancje komunikują się przez lekki message broker (w sieci `sztauer`). Architect wysyła task → Backend odbiera, implementuje, raportuje. Reviewer dostaje PR, komentuje. Wiadomości pojawiają się w Claude Code CLI jako kontekst.
+### F11.3 Request/Response
+**Akceptacja:** Instancja A wysyła request do instancji B (`POST http://backend:420/api/msg`). B odpowiada. Claude Code w A widzi odpowiedź jako kontekst. Timeout + retry przy braku odpowiedzi.
 
-### F11.4 Contract-driven development
-**Akceptacja:** Architect definiuje kontrakty API (OpenAPI, protobuf, TypeScript types) w `~/shared/contracts/`. Inne instancje implementują swoje strony kontraktu. CI w instancji tester weryfikuje zgodność implementacji z kontraktem.
+## Faza 12 — Shared State
 
-### F11.5 Human-as-architect
-**Akceptacja:** Użytkownik rozmawia wyłącznie z instancją Architect (lub dashboardem). Definiuje wizję i priorytety. Architect deleguje do specjalistów. Użytkownik reviewuje rezultaty, nie pisze kodu. Pull requesty od poszczególnych instancji trafiają do reviewer instancji, potem do użytkownika.
+### F12.1 Współdzielony volume
+**Akceptacja:** Volume `sztauer-shared` montowany w `~/shared/` we wszystkich instancjach. Pliki widoczne natychmiast we wszystkich instancjach. Conflict resolution: last-write-wins z logiem zmian.
 
-## Faza 12 — Self-Improving Platform
+### F12.2 Współdzielone repo git
+**Akceptacja:** `~/shared/repo/` to bare git repo zamontowane jako volume. Instancje commitują i pullują. Claude Code w każdej instancji widzi historię zmian innych instancji.
 
-### F12.1 Dogfooding
-**Akceptacja:** Dedykowana instancja Sztauer (`ROLE=platform-engineer`) monitoruje repo Sztauer, proponuje ulepszenia Dockerfile, entrypointa, konfiguracji. Otwiera PR-y do repo Sztauer — reviewed przez użytkownika.
+### F12.3 Lock protocol
+**Akceptacja:** Instancja może zablokować plik w shared (`~/shared/.locks/`). Inne instancje widzą lock i czekają lub pracują nad czymś innym. Automatyczny unlock po timeout.
 
-### F12.2 Auto-tuning
-**Akceptacja:** Platform-engineer instancja analizuje logi i metryki wszystkich instancji. Wykrywa: najczęściej doinstalowywane pakiety → proponuje dodanie do bazowego obrazu. Najczęściej zmieniane settings → proponuje nowe defaults. Powtarzające się błędy firewalla → proponuje rozszerzenie allowlisty.
+## Faza 13 — Autonomous Teams
 
-### F12.3 Template generation
-**Akceptacja:** Po zakończeniu projektu w instancji → platform-engineer analizuje finalny stan workspace i generuje nowy template (`TEMPLATE=`) z tego projektu. Szablony ewoluują na podstawie realnych projektów, nie są pisane ręcznie.
+### F13.1 Rola instancji
+**Akceptacja:** Env var `ROLE=architect|frontend|backend|tester|reviewer`. Każda rola dostaje specjalizowany CLAUDE.md z instrukcjami odpowiednimi do roli. Architect planuje i dzieli zadania. Frontend/Backend implementują. Tester pisze i uruchamia testy. Reviewer robi code review.
 
-## Faza 13 — Distributed Compute
+### F13.2 Shared project board
+**Akceptacja:** `~/shared/board.json` — zadania, statusy, kontrakty API, decyzje architektoniczne. Każda instancja czyta i aktualizuje board przez lock protocol (F12.3).
 
-### F13.1 Multi-machine orchestration
-**Akceptacja:** Instancje na różnych fizycznych maszynach (workstation, laptop, RPi) w tej samej sieci lokalnej tworzą klaster. Zadania wymagające GPU automatycznie routowane do maszyny z GPU. Lekkie zadania (lint, testy) → dowolna wolna maszyna.
+### F13.3 Contract-driven development
+**Akceptacja:** Architect definiuje kontrakty API (OpenAPI, protobuf, TypeScript types) w `~/shared/contracts/`. Inne instancje implementują swoje strony kontraktu. Tester weryfikuje zgodność.
 
-### F13.2 Work migration
-**Akceptacja:** Przenosisz laptopa z kawiarni do domu → instancja na laptopie deleguje ciężkie buildy do workstationa w domu automatycznie (po wykryciu sieci). Zero ręcznej konfiguracji — discovery przez mDNS/Bonjour.
+### F13.4 Human-as-architect
+**Akceptacja:** Użytkownik rozmawia wyłącznie z Architect. Definiuje wizję i priorytety. Architect deleguje. Użytkownik reviewuje rezultaty, nie pisze kodu.
 
-### F13.3 Resource pooling
-**Akceptacja:** Klaster raportuje łączne zasoby (CPU/RAM/GPU). Architect instancja podejmuje decyzje o alokacji: "ten build wymaga 16GB RAM → uruchom na workstationie". Dashboard (F9) pokazuje klaster jako całość, nie poszczególne maszyny.
+## Faza 14 — Team Analytics
 
-## Faza 14 — Persistent AI Memory
+### F14.1 Metryki zespołu
+**Akceptacja:** Każda instancja loguje: czas na task, ilość iteracji, testy pass/fail, rozmiar zmian. Logi w `~/shared/metrics/`. Dashboard (F9) wizualizuje.
 
-### F14.1 Cross-project knowledge
-**Akceptacja:** Nowa instancja dla projektu Next.js → automatycznie ładuje learned patterns z poprzednich projektów Next.js (architektura, najczęstsze problemy, preferowane biblioteki). Wiedza przechowywana w `~/.sztauer/memory/` jako indeksowane embeddingi.
+### F14.2 Bottleneck detection
+**Akceptacja:** System identyfikuje wąskie gardła: "Reviewer blokuje pipeline — 3 PR-y czekają >1h". Architect dostaje alert i może przeorganizować.
 
-### F14.2 Personal coding style
-**Akceptacja:** System uczy się preferencji użytkownika: naming conventions, architektura, code review patterns, preferowane narzędzia. Nowa instancja od startu zna styl użytkownika bez CLAUDE.md — bo pamięta z poprzednich sesji.
+### F14.3 Quality scoring
+**Akceptacja:** Automatyczny scoring jakości per instancja: test coverage, lint warnings, review iterations. Architect widzi kto potrzebuje lepszych instrukcji.
 
-### F14.3 Organizational knowledge base
-**Akceptacja:** Wiele instancji w ramach jednego użytkownika buduje współdzieloną bazę wiedzy: API patterns, deployment procedures, troubleshooting guides. Claude Code w dowolnej instancji może odpytać bazę: "jak deployowaliśmy serwis X ostatnio?".
+## Faza 15 — Playbooks & Recipes
 
-## Faza 15 — Full Product Lifecycle
+### F15.1 Playbook jako template
+**Akceptacja:** `~/shared/playbooks/rest-api.md` opisuje sprawdzony wzorzec: "jak budujemy REST API". Architect przypisuje playbook do zadania → instancja wykonawcza czyta go jako kontekst.
 
-### F15.1 Idea → Production
-**Akceptacja:** Użytkownik opisuje produkt w jednym zdaniu. System: spinuje team topology (F11), projektuje architekturę, implementuje, pisze testy, deployuje na staging (Dockerfile + compose w repo), uruchamia smoke testy. Użytkownik widzi działającą aplikację i iteruje feedbackiem.
+### F15.2 Auto-generowanie playbooks
+**Akceptacja:** Po udanym projekcie → system analizuje board, kontrakty, historię git → generuje playbook opisujący co zadziałało. Playbooki ewoluują z realnych doświadczeń.
 
-### F15.2 Continuous autonomous iteration
-**Akceptacja:** Po deployu na staging → Tester instancja monitoruje logi i metryki. Wykrywa bugi i regresje. Otwiera issue → Architect priorytetyzuje → Backend/Frontend fixuje → Reviewer sprawdza → auto-deploy. Cykl bez ludzkiej interwencji (z opcją veto).
+### F15.3 Playbook library
+**Akceptacja:** Katalog `playbooks/` w repo Sztauer. Wbudowane playbooki: `rest-api`, `nextjs-app`, `cli-tool`, `monorepo`. Community playbooks z GitHub.
 
-### F15.3 Multi-product management
-**Akceptacja:** Użytkownik zarządza portfelem produktów. Każdy produkt to osobny team topology. Dashboard (F9) rozszerzony o widok portfela: statusy produktów, metryki, aktywne prace. Użytkownik jest CEO swoich produktów, nie programistą.
+## Faza 16 — Self-Improving Platform
+
+### F16.1 Dogfooding
+**Akceptacja:** Instancja `ROLE=platform-engineer` monitoruje repo Sztauer, proponuje ulepszenia Dockerfile, entrypointa, konfiguracji. Otwiera PR-y — reviewed przez użytkownika.
+
+### F16.2 Auto-tuning
+**Akceptacja:** Platform-engineer analizuje metryki (F14) wszystkich instancji. Wykrywa: najczęściej doinstalowywane pakiety → dodaje do obrazu. Najczęstsze błędy firewalla → rozszerza allowlistę. Najczęstsze zmiany settings → nowe defaults.
+
+### F16.3 Template generation
+**Akceptacja:** Po zakończeniu projektu → platform-engineer analizuje workspace i generuje nowy template + playbook. Szablony ewoluują z realnych projektów.
+
+## Faza 17 — Build Cache & Artifacts
+
+### F17.1 Współdzielony cache
+**Akceptacja:** npm cache, pip cache, Docker layer cache współdzielone między instancjami (volume `sztauer-cache`). Drugie `npm install` tego samego pakietu → instant, bez pobierania.
+
+### F17.2 Artifact registry
+**Akceptacja:** Instancja builduje artefakt (Docker image, npm package, binary) → publikuje w lokalnym registry (sieć `sztauer`). Inne instancje pobierają bez rebuildu.
+
+### F17.3 Incremental builds
+**Akceptacja:** Zmiana w jednym pliku → tylko affected testy i buildy się uruchamiają. Cache-aware build system wykrywa co się zmieniło i pomija resztę.
+
+## Faza 18 — Resource Awareness
+
+### F18.1 Resource reporting
+**Akceptacja:** Każda instancja raportuje swoje zasoby: CPU usage, RAM usage, GPU availability, disk I/O. Dane w `~/shared/resources/` lub przez API.
+
+### F18.2 Resource requests
+**Akceptacja:** Instancja może zadeklarować: "potrzebuję 8GB RAM do tego builda". Architect/system sprawdza dostępność i alokuje lub kolejkuje.
+
+### F18.3 Graceful degradation
+**Akceptacja:** Instancja bliska limitu RAM → automatyczne compaction, zamknięcie nieużywanych serwisów, ostrzeżenie. Brak OOM-kill — proaktywne zarządzanie.
+
+## Faza 19 — Distributed Compute
+
+### F19.1 Multi-machine orchestration
+**Akceptacja:** Instancje na różnych maszynach (workstation, laptop, RPi) w sieci lokalnej tworzą klaster. GPU tasks → workstation. Lekkie tasks → dowolna wolna maszyna.
+
+### F19.2 Work migration
+**Akceptacja:** Laptop wykrywa workstation w sieci → deleguje ciężkie buildy automatycznie. Discovery przez mDNS/Bonjour. Zero konfiguracji.
+
+### F19.3 Resource pooling
+**Akceptacja:** Klaster raportuje łączne zasoby. Architect podejmuje decyzje o alokacji. Dashboard pokazuje klaster jako całość.
+
+## Faza 20 — Session Recording
+
+### F20.1 Zapis sesji
+**Akceptacja:** Każda sesja Claude Code nagrywana: prompty, odpowiedzi, komendy, wyniki, decyzje. Format: JSONL w `~/.sztauer/recordings/`. Replay możliwy.
+
+### F20.2 Annotacje
+**Akceptacja:** Użytkownik lub Reviewer mogą annotować nagranie: "ta decyzja była dobra", "tu powinien był użyć innego podejścia". Annotacje jako materiał treningowy.
+
+### F20.3 Pattern extraction
+**Akceptacja:** System analizuje nagrania i wyciąga powtarzające się wzorce: "za każdym razem gdy budujesz API, zaczynasz od route handlers". Wzorce stają się kandydatami na playbooki (F15).
+
+## Faza 21 — Context Handoff
+
+### F21.1 Session summary
+**Akceptacja:** Instancja generuje podsumowanie swojej sesji: co zrobiła, jakie decyzje podjęła, co zostało do zrobienia, jakie problemy napotkała. Format: markdown w `~/shared/handoffs/`.
+
+### F21.2 Seamless handoff
+**Akceptacja:** Instancja A kończy pracę → generuje handoff → instancja B startuje z handoffem jako kontekstem. B kontynuuje pracę A bez utraty wiedzy. Zero ręcznego briefingu.
+
+### F21.3 Cross-role handoff
+**Akceptacja:** Backend kończy implementację → generuje handoff dla Tester: "zaimplementowałem X, oto kontrakty, oto edge cases do sprawdzenia". Tester czyta handoff i pisze testy bez odpytywania Backendu.
+
+## Faza 22 — Persistent AI Memory
+
+### F22.1 Cross-project knowledge
+**Akceptacja:** Nowa instancja Next.js → automatycznie ładuje learned patterns z poprzednich projektów Next.js. Wiedza w `~/.sztauer/memory/` jako indeksowane embeddingi.
+
+### F22.2 Personal coding style
+**Akceptacja:** System uczy się preferencji użytkownika: naming, architektura, narzędzia. Nowa instancja zna styl bez CLAUDE.md.
+
+### F22.3 Organizational knowledge base
+**Akceptacja:** Współdzielona baza wiedzy między instancjami: API patterns, deployment procedures, troubleshooting. Claude Code może odpytać: "jak deployowaliśmy serwis X?".
+
+## Faza 23 — Deployment Pipeline
+
+### F23.1 Staging environment
+**Akceptacja:** Claude Code w instancji tworzy Dockerfile + compose → `sztauer deploy staging` → aplikacja dostępna pod `staging-{name}.localhost`. Auto-cleanup po 24h.
+
+### F23.2 Preview deploys
+**Akceptacja:** Każdy PR od instancji → automatyczny preview deploy. Reviewer widzi działającą aplikację, nie tylko diff kodu.
+
+### F23.3 Rollback
+**Akceptacja:** `sztauer rollback {name}` → przywraca poprzednią wersję stagingu. Historia deployów zachowana. One-command recovery.
+
+## Faza 24 — Feedback Integration
+
+### F24.1 Bug reporting
+**Akceptacja:** Użytkownik zgłasza bug na staging → trafia jako task na shared board (F13.2). Architect priorytetyzuje i deleguje. Claude Code dostaje kontekst: opis buga, logi, screenshot.
+
+### F24.2 Usage analytics
+**Akceptacja:** Staging zbiera metryki użytkowania: jakie strony odwiedzane, jakie akcje wykonywane, jakie błędy w konsoli. Dane dostępne dla instancji jako kontekst do optymalizacji.
+
+### F24.3 Autonomous fix loop
+**Akceptacja:** Bug report → Tester reprodukuje → Backend fixuje → Reviewer sprawdza → auto-deploy na staging → użytkownik weryfikuje. Cykl bez ręcznej interwencji poza weryfikacją.
+
+## Faza 25 — Full Product Lifecycle
+
+### F25.1 Idea → Production
+**Akceptacja:** Użytkownik opisuje produkt w jednym zdaniu. System spinuje team topology, projektuje architekturę, implementuje, testuje, deployuje na staging. Użytkownik widzi działającą aplikację i iteruje feedbackiem.
+
+### F25.2 Continuous autonomous iteration
+**Akceptacja:** Tester monitoruje staging → wykrywa bugi → issue → fix → review → auto-deploy. Cykl bez interwencji (z opcją veto).
+
+### F25.3 Multi-product management
+**Akceptacja:** Użytkownik zarządza portfelem produktów. Każdy produkt to osobny team topology. Dashboard z widokiem portfela. Użytkownik jest CEO swoich produktów, nie programistą.
