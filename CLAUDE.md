@@ -1,85 +1,106 @@
 # Sztauer
 
-Gotowy obraz Docker dla Claude Code. Podajesz klucz API, uruchamiasz kontener — dostajesz izolowane środowisko z edytorem webowym, firewallem i Claude Code CLI, dostępne w przeglądarce pod przewidywalną subdomeną.
+Gotowy obraz Docker dla Claude Code. Jedna komenda:
 
-Obraz publikowany na Docker Hub. Użytkownik nie klonuje repo — pobiera obraz i tworzy minimalny `compose.yml` + `.env`.
+```bash
+docker run -d -p 420:420 --name myapp sztauer/sandbox
+```
+
+`localhost:420/sztauer` → split screen: VS Code + Claude Code CLI. `localhost:420` → Twoja aplikacja.
+
+Zero plików, zero kluczy API. Logowanie przez Claude Max przy pierwszym uruchomieniu.
 
 ## Użycie
 
 ```bash
-# Infrastruktura (raz):
-docker compose -f infra.yml up -d
-
-# Nowy projekt:
-PROJECT_NAME=myapp docker compose up -d
+# Start:
+docker run -d -p 420:420 --name myapp sztauer/sandbox
 
 # Stop:
-PROJECT_NAME=myapp docker compose down
+docker stop myapp
 
-# Zniszcz (z volumes):
-PROJECT_NAME=myapp docker compose down -v
+# Zniszcz:
+docker rm -fv myapp
 ```
 
 ## Struktura repo (kod źródłowy obrazu)
 
 ```
-Dockerfile                      — obraz: code-server + Claude Code + iptables firewall
-entrypoint.sh                   — walidacja env, firewall, git detection, start edytora
-port-router.js                  — globalny HTTP/WS proxy: {name}-{port}.localhost → kontener
-allowlist.txt                   — domeny dozwolone przez firewall
-compose.yml                     — template dla użytkownika (parametryzowany PROJECT_NAME)
-compose.gpu.yml                 — override: GPU passthrough
-infra.yml                       — Caddy docker-proxy + port-router + sieć współdzielona
-.env.example                    — wymagane zmienne środowiskowe
-.github/workflows/build.yml     — CI/CD: multi-arch build + push Docker Hub
-docs/                           — VISION, ARCHITECTURE, SPEC, UI
+Dockerfile                          — obraz: code-server + Claude Code + terminal + firewall + proxy
+entrypoint.sh                       — start serwisów, inicjalizacja workspace
+config/
+├── code-server/
+│   ├── settings.json               — VS Code settings (no welcome, theme, font)
+│   └── extensions.txt              — pluginy do pre-install
+├── claude/
+│   └── settings.json               — Claude Code config (dangerous mode, max effort)
+├── proxy/                          — reverse proxy: /sztauer → workspace, / → app
+└── firewall/
+    └── allowlist.txt               — dozwolone domeny
+split-screen/
+└── index.html                      — strona split screen: VS Code (50%) + terminal (50%)
+workspace-template/
+└── CLAUDE.md                       — domyślne instrukcje dla Claude Code w instancji
+compose.yml                         — template: multi-project (opcjonalny)
+compose.gpu.yml                     — override: GPU (opcjonalny)
+infra.yml                           — template: subdomeny multi-project (opcjonalny)
+.github/workflows/build.yml         — CI/CD: multi-arch build + push Docker Hub
+docs/                               — VISION, ARCHITECTURE, SPEC, UI
 ```
 
 ## Styl kodu
 
-- Shell: `set -euo pipefail` na górze każdego skryptu. ShellCheck czysto.
-- YAML compose: bez tabulatorów, 2 spacje. Serwisy w kolejności zależności.
-- Dockerfile: multi-stage jeśli to zmniejsza obraz. Jawne wersje bazowych obrazów.
+- Shell: `set -euo pipefail`. ShellCheck czysto.
+- YAML compose: 2 spacje, bez tabulatorów.
+- Dockerfile: multi-stage jeśli zmniejsza obraz. Jawne wersje.
+- HTML: vanilla, zero frameworków. CSS grid dla layoutu.
 - Komentarze: wyłącznie "dlaczego", nie "co".
 
 ## Granice
 
 **Zawsze:**
-- Waliduj wymagane env vars w entrypoincie (fail-fast z czytelnym komunikatem)
-- Auto-detection w entrypoincie: git, firewall, dostępne narzędzia — bez ręcznych flag
-- Compose project name `sztauer-{nazwa}` — czytelne w Docker Desktop
-- Volumes named z przewidywalnym prefixem `sztauer-{nazwa}-`
-- Labele na kontenerach dla Docker Desktop, filtrowania i proxy discovery
-- Sieć proxy jako external
+- `docker run -p 420:420` bez env vars wystarczy do startu
+- `/sztauer` = workspace (split screen). `/` = aplikacja użytkownika
+- Claude Code w dangerous mode z max effort/thinking od startu
+- VS Code bez welcome screen, z pre-installed pluginami
+- Firewall default-deny z allowlistą
+- Domyślny CLAUDE.md w każdej nowej instancji (nie nadpisuj istniejącego)
 - Obraz multi-arch (amd64 + arm64)
 
 **Zapytaj:**
 - Zmiana allowlisty firewalla
-- Modyfikacja entrypointa
-- Zmiana schematu subdomen
-- Dodanie nowej zmiennej środowiskowej do interfejsu publicznego
+- Zmiana listy pre-installed pluginów VS Code
+- Zmiana domyślnych ustawień Claude Code
+- Zmiana schematu routingu (ścieżki, porty)
 
 **Nigdy:**
-- Docker socket montowany do kontenera projektu
-- `restart: always` na kontenerach projektów (tylko na infrastrukturze)
-- Hardkodowane sekrety w Dockerfile lub compose
-- Custom CLI wrapper — interfejsem jest `docker compose`
-- Build wymagany od użytkownika — obraz gotowy na Docker Hub
+- ANTHROPIC_API_KEY jako wymagany env var — autentykacja przez Claude Max
+- Docker socket montowany do kontenera
+- `restart: always` na kontenerach projektów
+- Hardkodowane sekrety w obrazie
+- Custom CLI wrapper — interfejsem jest docker
 
 ## Podjęte decyzje techniczne
 
-- **Edytor webowy:** code-server (port 8080) — prosty install, VS Code w przeglądarce
-- **Reverse proxy:** Caddy z caddy-docker-proxy — autodiscovery przez Docker labele, zero konfiguracji
+- **Edytor webowy:** code-server — VS Code w przeglądarce, `--auth none`
 - **Bazowy obraz:** node:20-bookworm — Node.js wymagany przez Claude Code
-- **Firewall:** iptables default-deny + DNS resolution allowlisty w entrypoincie. `cap_add: NET_ADMIN`
-- **Dynamiczne porty:** globalny port-router.js w infra.yml. Caddy catch-all `http://:80` → port-router. Port-router parsuje hostname i routuje do kontenera przez Docker DNS (`sztauer-{name}-workspace:{port}`)
-- **GPU:** compose override (`compose.gpu.yml`) zamiast profili
-- **CI/CD:** GitHub Actions z docker/build-push-action, multi-arch via QEMU
+- **Firewall:** iptables default-deny + allowlista. `cap_add: NET_ADMIN`
+- **Port kontenera:** 420 (wewnętrzny i domyślny zewnętrzny)
+- **Autentykacja:** Claude Max OAuth (token w `~/.claude/`)
+
+## Decyzje do podjęcia w trakcie implementacji
+
+- Web terminal: ttyd, xterm.js, gotty — co najprościej osadzić w iframe
+- Reverse proxy wewnętrzny: Caddy, nginx — co najlżejsze dla routingu ścieżek
+- Dynamiczny port aplikacji: jak wykrywać na jakim porcie nasłuchuje aplikacja użytkownika
+- Lista pluginów VS Code do pre-install
+- Lista ustawień VS Code (theme, font, etc.)
+- Dokładna konfiguracja Claude Code CLI (flagi, env vars, settings.json)
 
 ## Kontekst
 
 - @docs/VISION.md — dlaczego ten projekt istnieje
-- @docs/ARCHITECTURE.md — entrypoint auto-detection, multi-machine, model danych
+- @docs/ARCHITECTURE.md — routing, split screen, auth, multi-machine
 - @docs/SPEC.md — fazy z kryteriami akceptacji
-- @docs/UI.md — docker compose, Docker Desktop, subdomeny, przeglądarka
+- @docs/UI.md — docker run, split screen, port aplikacji
 - @tasks.md — plan implementacji

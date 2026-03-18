@@ -4,41 +4,38 @@
 
 Claude Code działa bezpośrednio na maszynie deweloperskiej. Nie ma izolacji, nie ma powtarzalności, nie ma prostego sposobu żeby zobaczyć efekty pracy AI w przeglądarce. Postawienie nowego środowiska to za każdym razem ręczny setup — inny na każdej maszynie, inny przy każdym projekcie.
 
-Przy kilku maszynach (workstation, laptop, RPi) problem się mnoży: konfiguracja dryfuje, setup trzeba powtarzać, nie ma jednego źródła prawdy o tym jak wygląda środowisko.
-
 ## Przyczyna źródłowa
 
-Brak gotowego obrazu Docker, który jedną komendą daje izolowane środowisko z Claude Code, edytorem webowym i firewallem — bez plików konfiguracyjnych, bez klonowania repo, bez budowania.
+Brak gotowego obrazu Docker, który jedną komendą daje gotowe środowisko pracy: edytor, Claude Code CLI w przeglądarce, port na wystawianie aplikacji — bez kluczy API, bez plików, bez konfiguracji.
 
 ## Rozwiązanie
 
-Sztauer to obraz Docker z Claude Code. Jedna komenda:
+Sztauer to obraz Docker. Jedna komenda:
 
 ```bash
-docker run -d -e ANTHROPIC_API_KEY -p 8080:8080 sztauer/sandbox
+docker run -d -p 420:420 --name myapp sztauer/sandbox
 ```
 
-Otwierasz `localhost:8080` — edytor webowy z Claude Code gotowym do pracy. Firewall aktywny. Git skonfigurowany automatycznie (jeśli credentials zamontowane). Zero plików, zero konfiguracji.
+Otwierasz `localhost:420/sztauer` — split screen: VS Code po lewej, Claude Code CLI po prawej. Oba w tym samym katalogu. Przy pierwszym uruchomieniu logujesz się przez Claude Max w przeglądarce — token zapamiętany, kolejne starty bez logowania.
 
-Dla wielu projektów jednocześnie — opcjonalny compose z reverse proxy i subdomenami. Ale podstawowe doświadczenie nie wymaga niczego poza Docker i kluczem API.
+`localhost:420` jest wolny — to port na Twoją aplikację. Cokolwiek Claude Code postawi (dashboard, API, frontend) — jest od razu dostępne pod tym adresem.
 
 ## Zasady projektowe
 
-1. **Jedna komenda.** `docker run` z kluczem API. Żadnych plików, żadnego klonowania, żadnego builda. Obraz gotowy na Docker Hub.
+1. **Jedna komenda, zero konfiguracji.** `docker run -p 420:420`. Żadnych kluczy API, żadnych plików, żadnych env vars. Logowanie przez przeglądarkę przy pierwszym użyciu.
 
-2. **Auto-detection w runtime.** Entrypoint kontenera wykrywa zamontowane git credentials, dostępne zasoby, zmienne środowiskowe. Konfiguruje się automatycznie — bez flag, bez configów.
+2. **Gotowe środowisko od startu.** VS Code bez ekranu powitalnego, z zainstalowanymi pluginami i ustawieniami. Claude Code w dangerous mode z maxem effortu i thinkingu. Zero ręcznej konfiguracji narzędzi.
 
-3. **Progresywna złożoność.** Jedno środowisko = `docker run`. Wiele środowisk z subdomenami = compose + infra. Każdy poziom jest opcjonalny — wyższy nie wymaga niższego.
+3. **Port aplikacji wolny.** `/sztauer` to workspace. `/` to Twoja aplikacja. Claude Code stawia serwer → od razu widoczny pod `localhost:420`.
 
-4. **Docker Desktop jako first-class UI.** Kontenery z czytelnymi nazwami, healthcheck statusem, przeglądalnymi logami. Start, stop, shell — wszystko przez GUI.
+4. **Kontener wie gdzie jest.** Domyślny CLAUDE.md w workspace informuje Claude Code o środowisku: jakie narzędzia ma, gdzie jest, jakie porty są dostępne, co może a czego nie.
 
-5. **Jeden obraz, wiele maszyn.** Ten sam obraz Docker Hub na workstation, laptopie i RPi (multi-arch). Nie ma konfiguracji maszynowej.
+5. **Docker Desktop jako first-class UI.** Czytelne nazwy, healthcheck, logi, play/stop.
 
-6. **Efemeryczność.** Zniszczenie kontenera nie zostawia śladów poza kodem źródłowym (jeśli zamontowany volume).
+6. **Jeden obraz, wiele maszyn.** Ten sam obraz na workstation, laptopie i RPi (multi-arch). Token Claude Max persystowany w volume.
 
 ## Nie-cele
 
-- **Nie jest orkiestratorem CI/CD.**
+- **Nie wymaga klucza API.** Autentykacja przez Claude Max (OAuth w przeglądarce).
+- **Nie wymaga żadnych plików.** Jedna komenda docker run.
 - **Nie jest platformą zespołową.** Jeden użytkownik, wiele maszyn.
-- **Nie zarządza projektami.** Nie ma bazy danych ani dashboardu.
-- **Nie wymaga żadnych plików.** compose.yml jest opcjonalny — convenience, nie wymóg.

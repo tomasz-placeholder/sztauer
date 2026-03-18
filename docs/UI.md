@@ -2,126 +2,133 @@
 
 ## Filozofia
 
-Trzy punkty kontaktu: **Docker Desktop** (wizualny przegląd), **terminal** (standardowe komendy Docker), **przeglądarka** (praca). Zero custom tooling — interfejsem jest Docker i Docker Desktop.
+Jedna komenda, zero plików. Otwierasz przeglądarkę — masz gotowe środowisko. Port główny wolny na Twoją aplikację.
 
-## Tryb prosty: docker run
-
-### Quick start
+## Quick start
 
 ```bash
-docker run -d -e ANTHROPIC_API_KEY -p 8080:8080 --name myapp sztauer/sandbox
+docker run -d -p 420:420 --name myapp sztauer/sandbox
 ```
 
-Otwórz `localhost:8080` — edytor z Claude Code. Gotowe.
+Otwórz `localhost:420/sztauer`. Gotowe.
 
-### Opcje
+## Adresy
+
+```
+localhost:420/sztauer          → split screen: VS Code + Claude Code CLI
+localhost:420                  → Twoja aplikacja (to co Claude Code postawi)
+```
+
+## Split screen: `/sztauer`
+
+```
+┌─────────────────────────────────┬─────────────────────────────────┐
+│                                 │                                 │
+│  VS Code                        │  Claude Code CLI                │
+│                                 │                                 │
+│  - Pusty edytor (bez welcome)   │  - Dangerous mode               │
+│  - Explorer: ~/                 │  - Max thinking                 │
+│  - Pre-installed plugins        │  - Max research (thorough)      │
+│  - Skonfigurowany theme/font    │  - Folder: ~/                   │
+│                                 │                                 │
+│  Edytujesz pliki,               │  Wydajesz polecenia,            │
+│  przeglądasz kod                │  Claude koduje                  │
+│                                 │                                 │
+└─────────────────────────────────┴─────────────────────────────────┘
+         50%                                   50%
+```
+
+Oba panele w tym samym katalogu (`~`). Plik stworzony przez Claude → natychmiast widoczny w VS Code.
+
+## Pierwsze uruchomienie — logowanie
+
+1. `docker run -d -p 420:420 --name myapp sztauer/sandbox`
+2. Otwórz `localhost:420/sztauer`
+3. W prawym panelu (Claude Code) → link do zalogowania
+4. Kliknij link → zaloguj się kontem Claude Max
+5. Gotowe — token zapamiętany w volume
+
+Kolejne uruchomienia bez logowania (jeśli volume zachowany).
+
+## Opcje docker run
 
 ```bash
-# Persystentny workspace:
-docker run -d -e ANTHROPIC_API_KEY -p 8080:8080 \
-  -v $(pwd)/myapp:/workspace --name myapp sztauer/sandbox
+# Podstawowe (zero config):
+docker run -d -p 420:420 --name myapp sztauer/sandbox
+
+# Z persystentnym workspace:
+docker run -d -p 420:420 -v ~/myapp:/home/coder --name myapp sztauer/sandbox
+
+# Z persystentnym tokenem Claude (przeżyje docker rm):
+docker run -d -p 420:420 -v claude-token:/home/coder/.claude --name myapp sztauer/sandbox
 
 # Git credentials z hosta:
-docker run -d -e ANTHROPIC_API_KEY -p 8080:8080 \
+docker run -d -p 420:420 \
   -v ~/.gitconfig:/home/coder/.gitconfig:ro \
   -v ~/.ssh:/home/coder/.ssh:ro \
-  -v $(pwd)/myapp:/workspace --name myapp sztauer/sandbox
+  --name myapp sztauer/sandbox
 
-# Drugi projekt na innym porcie:
-docker run -d -e ANTHROPIC_API_KEY -p 8081:8080 \
-  -v $(pwd)/other:/workspace --name other sztauer/sandbox
+# Inny port:
+docker run -d -p 8080:420 --name myapp sztauer/sandbox
+
+# GPU:
+docker run -d -p 420:420 --gpus all --name myapp sztauer/sandbox
 ```
 
-### Zarządzanie
+## Zarządzanie
 
 ```bash
 docker stop myapp           # zatrzymaj
-docker start myapp          # wznów
-docker rm -f myapp          # usuń kontener
-docker rm -fv myapp         # usuń kontener + volumes
+docker start myapp          # wznów (bez ponownego logowania)
+docker rm -f myapp          # usuń
 docker logs -f myapp        # logi
 docker exec -it myapp bash  # shell
 ```
 
-Standardowe komendy Docker. Nic nowego do nauki.
+Albo przez Docker Desktop — play/stop/logs/shell w GUI.
 
-## Tryb multi-project: docker compose (opcjonalny)
+## Port aplikacji: `localhost:420`
 
-Dla wielu projektów z subdomenami. Wymaga `compose.yml` + `infra.yml` (template z repo/README).
-
-### Komendy
-
-```bash
-# Infrastruktura (raz):
-docker compose -f infra.yml up -d
-
-# Nowy projekt:
-PROJECT_NAME=myapp docker compose up -d
-
-# Stop:
-PROJECT_NAME=myapp docker compose down
-
-# Zniszcz:
-PROJECT_NAME=myapp docker compose down -v
-```
-
-### Subdomeny
+Wszystko co Claude Code postawi na wewnętrznym porcie → natychmiast widoczne pod `localhost:420`.
 
 ```
-{nazwa}.localhost              → code-server (edytor)
-{nazwa}-{port}.localhost       → dowolny port w kontenerze
+Claude: "Uruchamiam serwer Next.js na porcie 3000"
+→ localhost:420 serwuje aplikację Next.js
 ```
 
-Wymagają działającej infrastruktury (`infra.yml`). Bez niej → tryb prosty z bezpośrednim portem.
-
-### Przepływ pracy
-
-```
-1. PROJECT_NAME=myapp docker compose up -d
-2. Otwórz myapp.localhost → edytor
-3. Terminal w edytorze → claude
-4. Claude koduje, stawia serwer → myapp-3000.localhost
-5. Iteruj: Claude → przeglądarka → Claude
-6. git push (gdy gotowe)
-7. PROJECT_NAME=myapp docker compose down
-```
+Gdy żadna aplikacja nie nasłuchuje → strona placeholder z informacją.
 
 ## Docker Desktop
 
-Kontenery Sztauer wyglądają czytelnie w Docker Desktop:
+- **Nazwa kontenera** → `myapp` (z `--name`).
+- **Healthcheck** → widoczny status.
+- **Logi** → przeglądalne przez GUI.
+- **Shell** → dostępny przez GUI.
+- **Play/Stop** → zarządzanie przez GUI.
 
-- Czytelna **nazwa** kontenera (--name lub compose project name).
-- **Healthcheck status** widoczny bez CLI.
-- **Logi** przeglądalne przez GUI.
-- **Shell** dostępny przez GUI (terminal w Docker Desktop).
-- **Start/Stop** przez GUI — play/stop button.
+## Multi-project (opcjonalny)
 
-Docker Desktop nie jest wymagany, ale gdy jest — kontenery są w nim first-class.
-
-## Setup nowej maszyny
-
-### Tryb prosty (zero plików)
+Wiele projektów jednocześnie — różne porty:
 
 ```bash
-docker run -d -e ANTHROPIC_API_KEY=sk-... -p 8080:8080 sztauer/sandbox
+docker run -d -p 420:420 --name project-a sztauer/sandbox
+docker run -d -p 421:420 --name project-b sztauer/sandbox
 ```
 
-Jedna komenda. Gotowe.
+Lub compose z subdomenami (template z README):
 
-### Tryb multi-project (dwa pliki)
-
-```
-1. Skopiuj compose.yml i infra.yml (z README lub repo)
-2. docker compose -f infra.yml up -d
-3. PROJECT_NAME=myapp docker compose up -d
+```bash
+docker compose -f infra.yml up -d
+PROJECT_NAME=myapp docker compose up -d
+# → myapp.localhost/sztauer = workspace
+# → myapp.localhost = aplikacja
 ```
 
 ## Czego NIE ma
 
-- **Custom CLI.** Interfejsem jest Docker i Docker Desktop.
-- **Plików konfiguracyjnych.** docker run z env var wystarczy.
-- **Dashboard projektów.** `docker ps`, Docker Desktop wystarczają.
-- **Auto-restart po reboocie.** Kontenery projektów nie restartują się automatycznie.
-- **SSL/TLS.** `.localhost` działa po HTTP.
+- **Klucza API.** Logowanie przez Claude Max w przeglądarce.
+- **Plików konfiguracyjnych.** docker run wystarczy.
+- **Custom CLI.** Interfejsem jest Docker.
+- **SSL/TLS.** `.localhost` i `localhost` po HTTP.
+- **Auto-restart.** Kontener nie restartuje się po reboocie.
 - **Multi-user auth.** Jeden użytkownik, wiele maszyn.
-- **Build wymagany od użytkownika.** Obraz gotowy na Docker Hub.

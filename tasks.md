@@ -4,51 +4,70 @@
 
 - Jeden task = jeden commit z opisowym message.
 - Po każdej fazie: test potwierdzający kryterium akceptacji.
-- Decyzje techniczne (wybór edytora, proxy, portów) podejmowane w momencie implementacji — nie z góry.
 
-## Decyzje techniczne
+## Podjęte decyzje techniczne
 
-- **Edytor webowy:** code-server (port 8080) — prosty install, aktywny development, VS Code w przeglądarce
-- **Reverse proxy:** Caddy z caddy-docker-proxy — autodiscovery przez Docker labele, zero konfiguracji per-projekt
-- **Bazowy obraz:** node:20-bookworm — Node.js potrzebny dla Claude Code, Debian dobrze wspierany
-- **Firewall:** iptables default-deny + allowlista resolowana w entrypoincie. Wymaga `cap_add: NET_ADMIN`
-- **Dynamiczne porty:** globalny port-router.js w infra.yml. Caddy catch-all → port-router → Docker DNS (`sztauer-{name}-workspace:{port}`)
-- **GPU:** compose override file (`compose.gpu.yml`) zamiast profili — czystsze niż dwa serwisy
+- **Edytor:** code-server (port wewnętrzny) — VS Code w przeglądarce
+- **Bazowy obraz:** node:20-bookworm
+- **Firewall:** iptables default-deny + allowlista
+- **Port kontenera:** 420
+- **Auth:** Claude Max OAuth (nie API key)
 
 ---
 
-## Faza 1 — Obraz: kontener z Claude Code
+## Faza 1 — Obraz bazowy
 
-- [x] **T1.1** Dockerfile: Claude Code CLI + code-server + iptables firewall. Multi-arch (amd64 + arm64).
-- [x] **T1.2** Entrypoint: walidacja env vars (fail-fast), firewall setup, auto-detection git credentials, inicjalizacja workspace, start edytora
-- [x] **T1.3** compose.yml (template dla użytkownika): parametryzowany `PROJECT_NAME`, named volumes `sztauer-{name}-*`, bind mount workspace, project name `sztauer-{name}`, labele dla Docker Desktop
-- [x] **T1.4** .env.example z dokumentacją wymaganych zmiennych
-- [x] **T1.5** Healthcheck: kontener raportuje stan do Dockera
-- [x] **T1.6** Test: `PROJECT_NAME=myapp docker compose up -d` → kontener startuje, Claude Code działa, edytor dostępny, firewall blokuje niedozwolony ruch. Projekt czytelny w Docker Desktop.
+- [ ] **T1.1** Dockerfile: node:20-bookworm + Claude Code CLI + code-server + web terminal + reverse proxy + iptables
+- [ ] **T1.2** Entrypoint: start firewall → proxy → code-server → web terminal → workspace init
+- [ ] **T1.3** Konfiguracja code-server: `--auth none`, `--disable-getting-started-override`, workspace = `~`, pre-installed pluginy, settings.json
+- [ ] **T1.4** Konfiguracja Claude Code: dangerous mode, max thinking budget, max research effort
+- [ ] **T1.5** Konfiguracja firewall: iptables default-deny + allowlista (Anthropic, npm, PyPI, GitHub, etc.)
+- [ ] **T1.6** Healthcheck: sprawdza code-server + web terminal
+- [ ] **T1.7** Test: `docker run -d -p 420:420 sztauer/sandbox` → kontener startuje, healthcheck przechodzi
 
-**Kamień milowy:** Gotowy obraz. Jedno polecenie stawia działający kontener z Claude Code i edytorem. Brak routingu — dostęp przez bezpośredni port.
-
----
-
-## Faza 2 — Routing: subdomeny
-
-- [x] **T2.1** infra.yml z Caddy docker-proxy + port-router: sieć `external`, autodiscovery przez labele
-- [x] **T2.2** Labele routingu w compose.yml: subdomena edytora `{name}.localhost`
-- [x] **T2.3** Subdomena aplikacji: `{name}-app.localhost` → port-router → port HTTP w kontenerze
-- [x] **T2.4** Dynamiczne porty: `{name}-{port}.localhost` → port-router → dowolny port
-- [x] **T2.5** Test wieloprojektowy: dwa kontenery jednocześnie, oba pod swoimi subdomenami, oba czytelne w Docker Desktop
-
-**Kamień milowy:** Projekty dostępne w przeglądarce pod przewidywalnymi adresami. Wiele projektów jednocześnie. Docker Desktop jako panel zarządzania.
+**Kamień milowy:** Kontener działa. Serwisy startują. Firewall aktywny. Jeszcze bez split screen i routingu.
 
 ---
 
-## Faza 3 — Publikacja i hardening
+## Faza 2 — Split screen i routing
 
-- [x] **T3.1** CI/CD: GitHub Actions multi-arch build + push na Docker Hub przy tagu
-- [x] **T3.2** GPU passthrough: compose.gpu.yml override file
-- [ ] **T3.3** Test na arm64 (RPi lub QEMU) — ten sam obraz, entrypoint dostosowuje się do środowiska
-- [ ] **T3.4** Test multi-machine: ta sama para compose.yml + .env na dwóch maszynach → identyczne doświadczenie
-- [x] **T3.5** README: quick start, auto-detection w entrypoincie
-- [x] **T3.6** Smoke test end-to-end: `docker compose -f infra.yml up -d` → `PROJECT_NAME=myapp docker compose up -d` → edytor w przeglądarce → Claude Code działa → serwis pod subdomeną. <3 minuty (bez pull).
+- [ ] **T2.1** Reverse proxy wewnętrzny: `/sztauer*` → workspace serwisy, `/` → port aplikacji
+- [ ] **T2.2** Strona split screen (`/sztauer`): HTML + CSS grid 50/50. Lewy iframe: code-server. Prawy iframe: web terminal.
+- [ ] **T2.3** code-server pod `/sztauer/editor` — poprawne base URL, assets, WebSocket
+- [ ] **T2.4** Web terminal pod `/sztauer/terminal` — uruchamia `claude --dangerously-skip-permissions`
+- [ ] **T2.5** Port aplikacji: `/` → wewnętrzny port (np. 3000). Placeholder gdy nic nie nasłuchuje.
+- [ ] **T2.6** Test: `localhost:420/sztauer` → split screen działa. `localhost:420` → placeholder. Claude Code stawia serwer → `localhost:420` serwuje aplikację.
 
-**Kamień milowy:** Obraz na Docker Hub. Multi-arch. Zero buildu dla użytkownika. Setup nowej maszyny = 3 pliki + 2 komendy.
+**Kamień milowy:** Split screen działa. VS Code i Claude Code obok siebie. Port aplikacji wolny i routowany.
+
+---
+
+## Faza 3 — Domyślne instrukcje + auth
+
+- [ ] **T3.1** `workspace-template/CLAUDE.md`: informacje o środowisku, narzędziach, portach, firewallu
+- [ ] **T3.2** Entrypoint: kopiuje CLAUDE.md do `~` jeśli nie istnieje
+- [ ] **T3.3** Persystencja tokenu Claude Max: volume na `~/.claude/`
+- [ ] **T3.4** Test: nowy kontener → `~/CLAUDE.md` obecny. Claude Code go czyta. Login → token zachowany po restart.
+
+**Kamień milowy:** Każda instancja ma instrukcje. Claude Max login działa i persystuje.
+
+---
+
+## Faza 4 — Publikacja
+
+- [ ] **T4.1** CI/CD: GitHub Actions multi-arch build + push Docker Hub
+- [ ] **T4.2** README: `docker run -d -p 420:420 sztauer/sandbox` → `localhost:420/sztauer` → login → praca
+- [ ] **T4.3** Smoke test end-to-end: docker run → split screen → login → Claude koduje → aplikacja pod `localhost:420`. <2 minuty.
+
+**Kamień milowy:** Obraz na Docker Hub. Jedna komenda od zera do gotowego środowiska.
+
+---
+
+## Opcjonalnie — Multi-project
+
+- [ ] **T5.1** compose.yml: parametryzowany PROJECT_NAME, labele, named volumes
+- [ ] **T5.2** infra.yml: reverse proxy z subdomenami `{name}.localhost`
+- [ ] **T5.3** compose.gpu.yml: GPU override
+- [ ] **T5.4** Test: dwa projekty jednocześnie pod subdomenami
+
+**Kamień milowy:** Wiele projektów jednocześnie z subdomenami. Opcjonalne — tryb prosty jest domyślny.
