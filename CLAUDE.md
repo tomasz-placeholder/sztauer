@@ -84,7 +84,7 @@ docs/                               — VISION, ARCHITECTURE, SPEC, UI
 ## Podjęte decyzje techniczne
 
 - **Edytor webowy:** code-server — VS Code w przeglądarce, `--auth none`
-- **Bazowy obraz:** node:20-bookworm — Node.js wymagany przez Claude Code
+- **Bazowy obraz:** debian:bookworm-slim — lekki. Claude Code przez natywny installer, Node osobno dla projektów użytkownika
 - **Firewall:** iptables default-deny + allowlista. `cap_add: NET_ADMIN`
 - **Port kontenera:** 420 (wewnętrzny i domyślny zewnętrzny)
 - **Autentykacja:** Claude Max OAuth (token w `~/.claude/`)

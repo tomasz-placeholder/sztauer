@@ -8,7 +8,7 @@
 ## Podjęte decyzje techniczne
 
 - **Edytor:** code-server (port wewnętrzny) — VS Code w przeglądarce
-- **Bazowy obraz:** node:20-bookworm
+- **Bazowy obraz:** debian:bookworm-slim — Claude Code przez natywny installer, Node osobno
 - **Firewall:** iptables default-deny + allowlista
 - **Port kontenera:** 420
 - **Auth:** Claude Max OAuth (nie API key)
@@ -17,7 +17,7 @@
 
 ## Faza 1 — Obraz bazowy
 
-- [ ] **T1.1** Dockerfile: node:20-bookworm + Claude Code CLI + code-server + web terminal + reverse proxy + iptables
+- [ ] **T1.1** Dockerfile: debian:bookworm-slim + Claude Code CLI (natywny installer) + node + code-server + web terminal + reverse proxy + iptables
 - [ ] **T1.2** Entrypoint: start firewall → proxy → code-server → web terminal → workspace init
 - [ ] **T1.3** Konfiguracja code-server: `--auth none`, `--disable-getting-started-override`, workspace = `~`, pre-installed pluginy, settings.json
 - [ ] **T1.4** Konfiguracja Claude Code: dangerous mode, max thinking budget, max research effort
