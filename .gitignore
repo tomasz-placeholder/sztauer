@@ -1,0 +1,13 @@
+# Local secrets
+.env
+
+# Project source code (bind mounted)
+projects/*
+!projects/.gitkeep
+
+# OS
+.DS_Store
+
+# Editor
+*.swp
+*.swo
