@@ -22,8 +22,11 @@ Fazy implementacji z kryteriami akceptacji. Szczegóły techniczne → @docs/ARC
 ### F1.6 Sieć sztauer
 **Akceptacja:** `docker run --network sztauer --name a` + `docker run --network sztauer --name b` → kontener `b` odpowiada na `curl http://b:port` z kontenera `a`.
 
-### F1.7 Test integracyjny
-**Akceptacja:** `docker run -d -p 420:420 --network sztauer --name test sztauer` → kontener startuje, healthcheck przechodzi w <30s.
+### F1.7 Testing infrastructure
+**Akceptacja:** CI pipeline uruchamia: hadolint (Dockerfile lint), shellcheck (shell lint), bats-core (unit testy entrypoint + firewall), container-structure-test (obraz: pakiety, ścieżki, porty), trivy (security scan — fail na CRITICAL). Wszystko przechodzi na każdym pushu.
+
+### F1.8 Test integracyjny
+**Akceptacja:** `docker run -d -p 420:420 --network sztauer --name test sztauer` → kontener startuje, healthcheck przechodzi w <30s. `tests/smoke.sh` + `tests/network.sh` (2 kontenery, komunikacja po nazwie) przechodzą.
 
 ## Faza 2 — Split screen i routing
 
@@ -45,6 +48,9 @@ Fazy implementacji z kryteriami akceptacji. Szczegóły techniczne → @docs/ARC
 ### F2.6 Port aplikacji
 **Akceptacja:** `python3 -m http.server 3000` wewnątrz kontenera → `localhost:420` serwuje. Przed uruchomieniem → placeholder.
 
+### F2.7 Testy routing + E2E
+**Akceptacja:** `tests/routing.sh` (curl: statusy, przekierowania, WebSocket). `tests/e2e/splitscreen.spec.ts` (Playwright: oba panele, 50/50, iframe'y ładują, responsywne). Oba w CI.
+
 ## Faza 3 — Domyślne instrukcje
 
 ### F3.1 workspace-template/CLAUDE.md
@@ -53,7 +59,7 @@ Fazy implementacji z kryteriami akceptacji. Szczegóły techniczne → @docs/ARC
 ## Faza 4 — Publikacja
 
 ### F4.1 CI/CD
-**Akceptacja:** Push tagu → obraz na Docker Hub. amd64 + arm64.
+**Akceptacja:** Push tagu → pipeline: lint → build → structure-test → bats → trivy → push Docker Hub. amd64 + arm64. Trivy fail na CRITICAL CVE blokuje push.
 
 ### F4.2 README
 **Akceptacja:** Nowy użytkownik: docker run → localhost:420/sztauer → login → praca. <2 minuty.

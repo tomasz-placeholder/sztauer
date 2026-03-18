@@ -4,6 +4,8 @@
 
 - Jeden task = jeden commit z opisowym message.
 - Po każdej fazie: test potwierdzający kryterium akceptacji.
+- Testy od pierwszego commita — infrastruktura testowa to concern Fazy 1.
+- Każdy commit przechodzi: hadolint + shellcheck + bats + container-structure-test.
 
 ## Podjęte decyzje techniczne
 
@@ -27,9 +29,16 @@
 - [ ] **T1.6** Konfiguracja firewall: iptables default-deny + allowlista (Anthropic, npm, PyPI, GitHub, etc.). Ruch w sieci `sztauer` dozwolony.
 - [ ] **T1.7** Healthcheck: sprawdza code-server + ttyd
 - [ ] **T1.8** Sieć `sztauer`: entrypoint tworzy sieć jeśli nie istnieje, kontener dołącza automatycznie
-- [ ] **T1.9** Test: `docker run -d -p 420:420 --network sztauer sztauer` → kontener startuje, healthcheck przechodzi, widoczny w sieci dla innych instancji
+- [ ] **T1.9** Testing infrastructure: hadolint, shellcheck, bats-core, container-structure-test, trivy w CI
+- [ ] **T1.10** `tests/structure-test.yaml`: weryfikacja obrazu (pakiety, ścieżki, uprawnienia, porty, user)
+- [ ] **T1.11** `tests/entrypoint.bats`: unit testy entrypoint (workspace init, CLAUDE.md copy, fail-fast)
+- [ ] **T1.12** `tests/firewall.bats`: testy firewalla (allowlista pass, deny reszta, sieć sztauer pass)
+- [ ] **T1.13** `tests/network.sh`: spinuj 2 kontenery, sprawdź komunikację po nazwie, sprawdź izolację od zewnątrz
+- [ ] **T1.14** `tests/smoke.sh`: start → healthcheck → sprawdź porty → stop. Quick sanity check.
+- [ ] **T1.15** `.github/workflows/test.yml`: CI pipeline — lint → build → structure-test → bats → trivy → smoke
+- [ ] **T1.16** Test integracyjny: `docker run -d -p 420:420 --network sztauer sztauer` → kontener startuje, healthcheck przechodzi, widoczny w sieci
 
-**Kamień milowy:** Kontener działa. Serwisy startują. Firewall aktywny. Jeszcze bez split screen i routingu.
+**Kamień milowy:** Kontener działa. Serwisy startują. Firewall aktywny. Pełna infrastruktura testowa w CI.
 
 ---
 
@@ -40,9 +49,11 @@
 - [ ] **T2.3** code-server pod `/sztauer/editor` — poprawne base URL, assets, WebSocket
 - [ ] **T2.4** ttyd pod `/sztauer/terminal` — uruchamia `claude --dangerously-skip-permissions`
 - [ ] **T2.5** Port aplikacji: `/` → wewnętrzny port (np. 3000). Placeholder gdy nic nie nasłuchuje.
-- [ ] **T2.6** Test: `localhost:420/sztauer` → split screen działa. `localhost:420` → placeholder. Claude Code stawia serwer → `localhost:420` serwuje aplikację.
+- [ ] **T2.6** `tests/routing.sh`: curl testy — `/sztauer` → 200, `/sztauer/editor` → code-server, `/sztauer/terminal` → ttyd, `/` → placeholder (502/200 zależnie od app)
+- [ ] **T2.7** `tests/e2e/splitscreen.spec.ts`: Playwright — oba iframe'y renderują, poprawne wymiary 50/50, WebSocket connectivity
+- [ ] **T2.8** Test integracyjny: split screen działa, port aplikacji routowany, Claude Code stawia serwer → `localhost:420` serwuje
 
-**Kamień milowy:** Split screen działa. VS Code i Claude Code obok siebie. Port aplikacji wolny i routowany.
+**Kamień milowy:** Split screen działa. VS Code i Claude Code obok siebie. Port aplikacji wolny. Testy routing + E2E w CI.
 
 ---
 
@@ -59,11 +70,12 @@
 
 ## Faza 4 — Publikacja
 
-- [ ] **T4.1** CI/CD: GitHub Actions multi-arch build + push Docker Hub
-- [ ] **T4.2** README: `docker run -d -p 420:420 --network sztauer sztauer` → `localhost:420/sztauer` → login → praca
-- [ ] **T4.3** Smoke test end-to-end: docker run → split screen → login → Claude koduje → aplikacja pod `localhost:420`. <2 minuty.
+- [ ] **T4.1** CI/CD: GitHub Actions multi-arch build + push Docker Hub. Pipeline: lint → build → test → trivy → push.
+- [ ] **T4.2** Trivy security scan: fail build na CRITICAL CVE. Raport w CI artifacts.
+- [ ] **T4.3** README: `docker run -d -p 420:420 --network sztauer sztauer` → `localhost:420/sztauer` → login → praca
+- [ ] **T4.4** Smoke test end-to-end: docker run → split screen → login → Claude koduje → aplikacja pod `localhost:420`. <2 minuty.
 
-**Kamień milowy:** Obraz na Docker Hub. Jedna komenda od zera do gotowego środowiska.
+**Kamień milowy:** Obraz na Docker Hub. CI z pełnym pipeline testów. Security scan na każdym buildzie.
 
 ---
 

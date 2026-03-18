@@ -41,10 +41,21 @@ split-screen/
 └── index.html                      — strona split screen: VS Code (50%) + terminal (50%)
 workspace-template/
 └── CLAUDE.md                       — domyślne instrukcje dla Claude Code w instancji
+tests/
+├── structure-test.yaml             — container-structure-test: pakiety, ścieżki, porty
+├── entrypoint.bats                 — bats: unit testy entrypoint (firewall, workspace init)
+├── firewall.bats                   — bats: testy firewalla (allowlista, deny, sieć sztauer)
+├── routing.sh                      — integration: curl testy routingu (/, /sztauer, /sztauer/*)
+├── network.sh                      — integration: multi-container komunikacja w sieci sztauer
+├── e2e/                            — Playwright: split screen, code-server, ttyd
+│   └── splitscreen.spec.ts
+└── smoke.sh                        — quick smoke test: start → healthcheck → stop
 compose.yml                         — template: multi-project (opcjonalny)
 compose.gpu.yml                     — override: GPU (opcjonalny)
 infra.yml                           — template: subdomeny multi-project (opcjonalny)
-.github/workflows/build.yml         — CI/CD: multi-arch build + push Docker Hub
+.github/workflows/
+├── build.yml                       — CI/CD: multi-arch build + push Docker Hub
+└── test.yml                        — CI: lint + unit + structure + integration + security
 docs/                               — VISION, ARCHITECTURE, SPEC, UI
 ```
 
@@ -55,6 +66,27 @@ docs/                               — VISION, ARCHITECTURE, SPEC, UI
 - Dockerfile: multi-stage jeśli zmniejsza obraz. Jawne wersje.
 - HTML: vanilla, zero frameworków. CSS grid dla layoutu.
 - Komentarze: wyłącznie "dlaczego", nie "co".
+
+## Testowanie
+
+Projekt rośnie do dużych rozmiarów — testowanie od pierwszego commita, nie jako afterthought.
+
+**Narzędzia (zainstalowane w CI):**
+- **Hadolint** — lint Dockerfile
+- **ShellCheck** — lint shell scripts
+- **bats-core** — unit testy bash (entrypoint, firewall, workspace init)
+- **container-structure-test** (Google) — weryfikacja obrazu: pakiety, ścieżki, uprawnienia, porty
+- **Trivy** — security scan obrazu (CVE)
+- **Playwright** — E2E testy UI (split screen, routing, WebSocket)
+- **curl + jq** — integration testy HTTP (routing, healthcheck, firewall)
+
+**Zasady:**
+- Każdy commit przechodzi: hadolint + shellcheck + bats + container-structure-test
+- Każda faza ma swoje testy akceptacyjne (patrz @docs/SPEC.md)
+- Testy sieciowe spinują ≥2 kontenery i weryfikują komunikację
+- Testy firewalla: pozytywne (allowlista) i negatywne (reszta zablokowana)
+- E2E testy UI: uruchamiane po buildzie obrazu, headless Playwright
+- Security scan: Trivy na każdym buildzie, fail na CRITICAL CVE
 
 ## Granice
 
