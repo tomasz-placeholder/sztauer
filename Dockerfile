@@ -30,16 +30,13 @@ RUN npm install -g @anthropic-ai/claude-code
 # Firewall allowlist
 COPY allowlist.txt /etc/sztauer/allowlist.txt
 
-# Port router for dynamic subdomain routing
-COPY port-router.js /opt/sztauer/port-router.js
-
 # Entrypoint
 COPY entrypoint.sh /opt/sztauer/entrypoint.sh
 RUN chmod +x /opt/sztauer/entrypoint.sh
 
 WORKDIR /workspace
 
-EXPOSE 8080 9091
+EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD curl -sf http://localhost:8080/healthz || exit 1

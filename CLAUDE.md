@@ -25,11 +25,11 @@ PROJECT_NAME=myapp docker compose down -v
 ```
 Dockerfile                      — obraz: code-server + Claude Code + iptables firewall
 entrypoint.sh                   — walidacja env, firewall, git detection, start edytora
-port-router.js                  — HTTP/WS proxy dla dynamicznych subdomen portów
+port-router.js                  — globalny HTTP/WS proxy: {name}-{port}.localhost → kontener
 allowlist.txt                   — domeny dozwolone przez firewall
 compose.yml                     — template dla użytkownika (parametryzowany PROJECT_NAME)
 compose.gpu.yml                 — override: GPU passthrough
-infra.yml                       — Traefik reverse proxy + sieć współdzielona
+infra.yml                       — Caddy docker-proxy + port-router + sieć współdzielona
 .env.example                    — wymagane zmienne środowiskowe
 .github/workflows/build.yml     — CI/CD: multi-arch build + push Docker Hub
 docs/                           — VISION, ARCHITECTURE, SPEC, UI
@@ -69,10 +69,10 @@ docs/                           — VISION, ARCHITECTURE, SPEC, UI
 ## Podjęte decyzje techniczne
 
 - **Edytor webowy:** code-server (port 8080) — prosty install, VS Code w przeglądarce
-- **Reverse proxy:** Traefik v3 — natywny Docker provider, autodiscovery przez labele
+- **Reverse proxy:** Caddy z caddy-docker-proxy — autodiscovery przez Docker labele, zero konfiguracji
 - **Bazowy obraz:** node:20-bookworm — Node.js wymagany przez Claude Code
 - **Firewall:** iptables default-deny + DNS resolution allowlisty w entrypoincie. `cap_add: NET_ADMIN`
-- **Dynamiczne porty:** port-router.js (Node.js HTTP/WS proxy, port 9091). Traefik kieruje `{name}-{port}.localhost` do niego
+- **Dynamiczne porty:** globalny port-router.js w infra.yml. Caddy catch-all `http://:80` → port-router. Port-router parsuje hostname i routuje do kontenera przez Docker DNS (`sztauer-{name}-workspace:{port}`)
 - **GPU:** compose override (`compose.gpu.yml`) zamiast profili
 - **CI/CD:** GitHub Actions z docker/build-push-action, multi-arch via QEMU
 

@@ -113,10 +113,6 @@ setup_firewall
 setup_git
 init_workspace
 
-# Port router (background) — enables {name}-{port}.localhost routing
-echo "Starting port router on :9091"
-node /opt/sztauer/port-router.js &
-
 # Editor
 echo "Starting code-server on :8080"
 exec code-server \

@@ -11,8 +11,8 @@ services:
       - FIREWALL_ALLOW=${FIREWALL_ALLOW:-}
     volumes:
       - ./projects/${PROJECT_NAME}:/workspace
-      - sztauer-${PROJECT_NAME}-vscode:/root/.local/share/code-server
-      - sztauer-${PROJECT_NAME}-claude:/root/.claude
+      - vscode:/root/.local/share/code-server
+      - claude:/root/.claude
       # Uncomment to enable git credentials:
       # - ~/.gitconfig:/root/.gitconfig:ro
       # - ~/.ssh:/root/.ssh:ro
@@ -21,17 +21,11 @@ services:
     cap_add:
       - NET_ADMIN
     labels:
-      sztauer: "true"
-      sztauer.project: "${PROJECT_NAME}"
-      # Traefik: editor subdomain
-      traefik.enable: "true"
-      traefik.http.routers.${PROJECT_NAME}-editor.rule: "Host(`${PROJECT_NAME}.localhost`)"
-      traefik.http.routers.${PROJECT_NAME}-editor.service: "${PROJECT_NAME}-editor"
-      traefik.http.services.${PROJECT_NAME}-editor.loadbalancer.server.port: "8080"
-      # Traefik: app & dynamic port subdomains
-      traefik.http.routers.${PROJECT_NAME}-ports.rule: "HostRegexp(`^${PROJECT_NAME}-[0-9]+\\.localhost$$`) || Host(`${PROJECT_NAME}-app.localhost`)"
-      traefik.http.routers.${PROJECT_NAME}-ports.service: "${PROJECT_NAME}-ports"
-      traefik.http.services.${PROJECT_NAME}-ports.loadbalancer.server.port: "9091"
+      - "sztauer=true"
+      - "sztauer.project=${PROJECT_NAME}"
+      # Caddy: editor subdomain ({name}.localhost → code-server)
+      - "caddy=http://${PROJECT_NAME}.localhost"
+      - "caddy.reverse_proxy={{upstreams 8080}}"
     networks:
       - proxy
       - default
@@ -43,9 +37,9 @@ services:
       retries: 3
 
 volumes:
-  sztauer-${PROJECT_NAME}-vscode:
+  vscode:
     name: sztauer-${PROJECT_NAME}-vscode
-  sztauer-${PROJECT_NAME}-claude:
+  claude:
     name: sztauer-${PROJECT_NAME}-claude
 
 networks:

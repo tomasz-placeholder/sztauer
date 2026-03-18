@@ -2,23 +2,35 @@ name: sztauer-infra
 
 services:
   proxy:
-    image: traefik:v3.3
-    command:
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=sztauer-proxy"
-      - "--entrypoints.web.address=:80"
-      - "--log.level=WARN"
+    image: lucaslorentz/caddy-docker-proxy:2.9
     ports:
       - "80:80"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - proxy
+    restart: always
+    environment:
+      - CADDY_INGRESS_NETWORKS=sztauer-proxy
+    labels:
+      sztauer: "true"
+      sztauer.role: "proxy"
+
+  port-router:
+    image: node:20-slim
+    volumes:
+      - ./port-router.js:/app/port-router.js:ro
+    command: ["node", "/app/port-router.js"]
     networks:
       - proxy
     restart: always
     labels:
       sztauer: "true"
-      sztauer.role: "proxy"
+      sztauer.role: "port-router"
+      # Catch-all for dynamic port subdomains ({name}-{port}.localhost, {name}-app.localhost)
+      # Specific editor routes (from workspace containers) take priority.
+      caddy: "http://:80"
+      caddy.reverse_proxy: "{{upstreams 9091}}"
 
 networks:
   proxy:

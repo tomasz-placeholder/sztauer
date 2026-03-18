@@ -118,8 +118,9 @@ Entrypoint kontenera automatycznie wykrywa:
 
 ```
 ┌──────────────────────────────────────────────────┐
-│  Traefik (infra.yml)                             │
-│  *.localhost → kontenery Sztauer                 │
+│  Caddy + port-router (infra.yml)                 │
+│  {name}.localhost → edytor                       │
+│  {name}-{port}.localhost → port w kontenerze     │
 ├──────────────────────────────────────────────────┤
 │  sztauer/sandbox (Docker Hub)                    │
 │  code-server + Claude Code + firewall            │
