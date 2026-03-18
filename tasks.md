@@ -67,7 +67,7 @@
 
 ---
 
-## Opcjonalnie — Multi-project
+## Faza 5 — Multi-project
 
 - [ ] **T5.1** compose.yml: parametryzowany PROJECT_NAME, labele, named volumes
 - [ ] **T5.2** infra.yml: reverse proxy z subdomenami `{name}.localhost`
@@ -75,3 +75,72 @@
 - [ ] **T5.4** Test: dwa projekty jednocześnie pod subdomenami
 
 **Kamień milowy:** Wiele projektów jednocześnie z subdomenami. Opcjonalne — tryb prosty jest domyślny.
+
+---
+
+## Faza 6 — Snapshot & Restore
+
+- [ ] **T6.1** Skrypt/instrukcja snapshot: `docker commit` + metadata labels (services, packages, claude session state)
+- [ ] **T6.2** Named snapshots z labelami `sztauer.snapshot=<name>`
+- [ ] **T6.3** Test: snapshot na maszynie A → transfer → restore na maszynie B → identyczny stan
+
+**Kamień milowy:** Przenośne środowiska. Snapshot pracy z laptopa → kontynuacja na workstationie.
+
+---
+
+## Faza 7 — Project Templates
+
+- [ ] **T7.1** Katalog `templates/` w repo: nextjs, python-api, fullstack, etc. Każdy template = pliki workspace + CLAUDE.md ze stack-specific instrukcjami
+- [ ] **T7.2** Env var `TEMPLATE=<name>`: entrypoint kopiuje template do `~/` jeśli workspace pusty
+- [ ] **T7.3** Custom template z URL: `TEMPLATE=https://github.com/user/template` → klonuje repo
+- [ ] **T7.4** Test: `docker run -e TEMPLATE=nextjs ... sztauer` → workspace z gotowym Next.js scaffoldem, Claude Code czyta stack-specific CLAUDE.md
+
+**Kamień milowy:** Nowy projekt w znanym stacku gotowy do pracy w sekundy.
+
+---
+
+## Faza 8 — Service Discovery
+
+- [ ] **T8.1** Labele serwisów: `sztauer.services=api:3000,ws:8080` na kontenerach
+- [ ] **T8.2** Entrypoint: auto-generuje sekcję w `~/CLAUDE.md` z listą dostępnych serwisów w sieci (Docker API read-only)
+- [ ] **T8.3** Health-aware: serwisy z unhealthy kontenerów oznaczone jako niedostępne
+- [ ] **T8.4** Test: instancja A rozgłasza `api:3000` → instancja B widzi to w swoim CLAUDE.md → Claude Code w B wie jak dotrzeć do API
+
+**Kamień milowy:** Instancje świadome siebie nawzajem. Claude Code w każdej instancji wie jakie serwisy są dostępne.
+
+---
+
+## Faza 9 — Observability
+
+- [ ] **T9.1** Template `dashboard`: Sztauer instancja-meta. HTML dashboard na `/` pokazujący aktywne instancje, health, resources, serwisy.
+- [ ] **T9.2** Activity feed: WebSocket stream zmian plików, komend, startów serwisów z każdej instancji
+- [ ] **T9.3** Resource monitoring: CPU/RAM per instancja (Docker stats API)
+- [ ] **T9.4** Test: dashboard widzi 3 instancje, ich serwisy, resource usage w real-time
+
+**Kamień milowy:** Widok z lotu ptaka na wszystkie instancje. Monitoring bez wchodzenia do poszczególnych kontenerów.
+
+---
+
+## Faza 10 — Plugin System
+
+- [ ] **T10.1** Struktura pluginu: `plugins/<name>/manifest.json` + pliki (CLAUDE.md fragment, VS Code extensions, firewall rules, hooki)
+- [ ] **T10.2** Aktywacja: `-e PLUGINS=typescript,docker` → entrypoint merguje pluginy do workspace
+- [ ] **T10.3** Pluginy stackowe: typescript, python, rust, go — extensions + CLAUDE.md + config
+- [ ] **T10.4** Community plugins: `-e PLUGINS=github.com/user/plugin` → klonuje i aktywuje
+- [ ] **T10.5** Plugin hooks: `on-start.sh`, `on-file-change.sh`, `on-service-start.sh`
+- [ ] **T10.6** Test: plugin `typescript` dodaje ESLint/Prettier extensions, CLAUDE.md fragment z TS konwencjami, tsconfig template
+
+**Kamień milowy:** Rozszerzalne środowisko. Społeczność tworzy i dzieli się pluginami.
+
+---
+
+## Faza 11 — Autonomous Teams (horyzont 5-letni)
+
+- [ ] **T11.1** Role instancji: `ROLE=architect|frontend|backend|tester|reviewer` → specjalizowany CLAUDE.md per rola
+- [ ] **T11.2** Shared board: `~/shared/board.json` (volume współdzielony) — zadania, statusy, kontrakty API, decyzje
+- [ ] **T11.3** Message broker: lekki serwis w sieci `sztauer`. Instancje wysyłają/odbierają taski i updates.
+- [ ] **T11.4** Contract-driven dev: Architect definiuje kontrakty (OpenAPI/protobuf) w `~/shared/contracts/`. Inne instancje implementują swoje strony.
+- [ ] **T11.5** Human-as-architect: użytkownik rozmawia z Architect instancją, definiuje wizję. Architect deleguje, koordynuje, eskaluje. Użytkownik reviewuje, nie koduje.
+- [ ] **T11.6** Test end-to-end: użytkownik opisuje app → Architect dzieli na taski → Backend/Frontend implementują → Tester weryfikuje → Reviewer sprawdza → PR do usera. Cały flow bez ludzkiej interwencji poza ostatecznym review.
+
+**Kamień milowy:** Autonomiczny zespół AI. Użytkownik definiuje wizję, maszyny dostarczają produkt.
