@@ -10,55 +10,6 @@ docker run -d -p 420:420 --network sztauer --name myapp sztauer
 
 Zero plików, zero kluczy API. Logowanie przez Claude Max przy pierwszym uruchomieniu.
 
-## Użycie
-
-```bash
-# Start:
-docker run -d -p 420:420 --network sztauer --name myapp sztauer
-
-# Stop:
-docker stop myapp
-
-# Zniszcz:
-docker rm -fv myapp
-```
-
-## Struktura repo (kod źródłowy obrazu)
-
-```
-Dockerfile                          — obraz: code-server + Claude Code + terminal + firewall + proxy
-entrypoint.sh                       — start serwisów, inicjalizacja workspace
-config/
-├── code-server/
-│   ├── settings.json               — VS Code settings (no welcome, theme, font)
-│   └── extensions.txt              — pluginy do pre-install
-├── claude/
-│   └── settings.json               — Claude Code config (dangerous mode, max effort)
-├── proxy/                          — reverse proxy: /sztauer → workspace, / → app
-└── firewall/
-    └── allowlist.txt               — dozwolone domeny
-split-screen/
-└── index.html                      — strona split screen: VS Code (50%) + terminal (50%)
-workspace-template/
-└── CLAUDE.md                       — domyślne instrukcje dla Claude Code w instancji
-tests/
-├── structure-test.yaml             — container-structure-test: pakiety, ścieżki, porty
-├── entrypoint.bats                 — bats: unit testy entrypoint (firewall, workspace init)
-├── firewall.bats                   — bats: testy firewalla (allowlista, deny, sieć sztauer)
-├── routing.sh                      — integration: curl testy routingu (/, /sztauer, /sztauer/*)
-├── network.sh                      — integration: multi-container komunikacja w sieci sztauer
-├── e2e/                            — Playwright: split screen, code-server, ttyd
-│   └── splitscreen.spec.ts
-└── smoke.sh                        — quick smoke test: start → healthcheck → stop
-compose.yml                         — template: multi-project (opcjonalny)
-compose.gpu.yml                     — override: GPU (opcjonalny)
-infra.yml                           — template: subdomeny multi-project (opcjonalny)
-.github/workflows/
-├── build.yml                       — CI/CD: multi-arch build + push Docker Hub
-└── test.yml                        — CI: lint + unit + structure + integration + security
-docs/                               — VISION, ARCHITECTURE, SPEC, UI
-```
-
 ## Styl kodu
 
 - Shell: `set -euo pipefail`. ShellCheck czysto.
