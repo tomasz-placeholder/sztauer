@@ -105,8 +105,9 @@ Każda nowa instancja dostaje `~/CLAUDE.md` z informacjami:
 - Twój workspace: `~/` (katalog domowy)
 - Dostępne narzędzia: node, python, git, etc.
 - Port aplikacji: wszystko co wystawisz na wewnętrznym porcie będzie widoczne pod `localhost:420`
-- Firewall: default-deny, allowlista (lista domen)
-- Persystencja: `/workspace` lub `~/` zamontowane jako volume
+- Sieć: jesteś w sieci `sztauer` — inne instancje dostępne po nazwie kontenera (np. `curl http://backend:3000`)
+- Firewall: default-deny, allowlista (lista domen). Ruch w sieci `sztauer` dozwolony.
+- Persystencja: `~/` zamontowane jako volume
 
 ## Docker Desktop
 
@@ -138,14 +139,47 @@ Każda nowa instancja dostaje `~/CLAUDE.md` z informacjami:
 
 Ten sam obraz. Ta sama komenda. Logowanie przez przeglądarkę na każdej maszynie (raz). Token persystowany w Docker volume.
 
+## Sieć `sztauer`
+
+Każdy kontener Sztauer dołącza do współdzielonej sieci Docker `sztauer`. Sieć tworzona automatycznie przez entrypoint jeśli nie istnieje.
+
+```
+┌─────────── sieć: sztauer ───────────┐
+│                                      │
+│  ┌──────────┐  ┌──────────┐         │
+│  │ myapp    │  │ backend  │         │
+│  │ :420     │←→│ :420     │         │
+│  └──────────┘  └──────────┘         │
+│                                      │
+│  Kontenery widzą się po nazwie:      │
+│  curl http://backend:3000            │
+│  curl http://myapp:8080              │
+└──────────────────────────────────────┘
+```
+
+Dzięki Docker DNS instancje komunikują się po nazwie kontenera (`--name`). Aplikacja w `myapp` może wywołać API w `backend` przez `http://backend:3000` — bez konfiguracji portów na hoście.
+
+Sieć jest typu bridge, tworzona z `--attachable` aby kontenery uruchamiane przez `docker run` mogły do niej dołączać (nie tylko compose).
+
+Komenda startowa automatycznie dołącza do sieci:
+```bash
+docker run -d -p 420:420 --network sztauer --name myapp sztauer/sandbox
+```
+
+Entrypoint tworzy sieć jeśli nie istnieje:
+```bash
+docker network create sztauer 2>/dev/null || true
+```
+
 ## Niezmienniki
 
 1. `docker run -p 420:420` wystarczy do działającego środowiska — zero plików, zero env vars.
 2. `/sztauer` to workspace. `/` to aplikacja użytkownika. Nigdy odwrotnie.
-3. Firewall zawsze aktywny, default-deny.
+3. Firewall zawsze aktywny, default-deny. Ruch wewnątrz sieci `sztauer` dozwolony.
 4. Claude Code zawsze w dangerous mode z max effort/thinking.
 5. Kontener nie modyfikuje plików poza workspace i swoimi volumes.
 6. Obraz na Docker Hub — użytkownik nie buduje.
+7. Każdy kontener w sieci `sztauer` — instancje widzą się nawzajem po nazwie.
 
 ## Struktura repozytorium (kod źródłowy obrazu)
 

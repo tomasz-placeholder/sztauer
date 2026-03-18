@@ -10,7 +10,7 @@ Developer z subskrypcją Claude Max. Chce odpalić izolowane środowisko jedną 
 
 Obraz z Claude Code CLI, code-server, web terminal, reverse proxy i firewallem. Bazowy obraz: node:20-bookworm. Multi-arch (amd64 + arm64).
 
-**Akceptacja:** `docker run -d -p 420:420 --name myapp sztauer/sandbox` → kontener startuje. `localhost:420/sztauer` otwiera split screen.
+**Akceptacja:** `docker run -d -p 420:420 --network sztauer --name myapp sztauer/sandbox` → kontener startuje. `localhost:420/sztauer` otwiera split screen. Kontener widoczny dla innych instancji po nazwie.
 
 ### F1.2 — Entrypoint
 
@@ -28,7 +28,7 @@ Claude Code CLI uruchamia się w web terminalu. Przy pierwszym użyciu wymaga lo
 
 iptables default-deny z allowlistą domen. `cap_add: NET_ADMIN` (lub odpowiednik w docker run).
 
-**Akceptacja:** Ruch do domen poza allowlistą blokowany. Ruch do allowlisty (Anthropic, npm, PyPI, GitHub) przepuszczany.
+**Akceptacja:** Ruch do domen poza allowlistą blokowany. Ruch do allowlisty (Anthropic, npm, PyPI, GitHub) przepuszczany. Ruch wewnątrz sieci `sztauer` dozwolony.
 
 ### F1.5 — Healthcheck
 

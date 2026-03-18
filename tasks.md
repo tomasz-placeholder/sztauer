@@ -21,9 +21,10 @@
 - [ ] **T1.2** Entrypoint: start firewall → proxy → code-server → web terminal → workspace init
 - [ ] **T1.3** Konfiguracja code-server: `--auth none`, `--disable-getting-started-override`, workspace = `~`, pre-installed pluginy, settings.json
 - [ ] **T1.4** Konfiguracja Claude Code: dangerous mode, max thinking budget, max research effort
-- [ ] **T1.5** Konfiguracja firewall: iptables default-deny + allowlista (Anthropic, npm, PyPI, GitHub, etc.)
+- [ ] **T1.5** Konfiguracja firewall: iptables default-deny + allowlista (Anthropic, npm, PyPI, GitHub, etc.). Ruch w sieci `sztauer` dozwolony.
 - [ ] **T1.6** Healthcheck: sprawdza code-server + web terminal
-- [ ] **T1.7** Test: `docker run -d -p 420:420 sztauer/sandbox` → kontener startuje, healthcheck przechodzi
+- [ ] **T1.7** Sieć `sztauer`: entrypoint tworzy sieć jeśli nie istnieje, kontener dołącza automatycznie
+- [ ] **T1.8** Test: `docker run -d -p 420:420 --network sztauer sztauer/sandbox` → kontener startuje, healthcheck przechodzi, widoczny w sieci dla innych instancji
 
 **Kamień milowy:** Kontener działa. Serwisy startują. Firewall aktywny. Jeszcze bez split screen i routingu.
 

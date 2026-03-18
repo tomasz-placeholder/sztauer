@@ -7,7 +7,7 @@ Jedna komenda, zero plików. Otwierasz przeglądarkę — masz gotowe środowisk
 ## Quick start
 
 ```bash
-docker run -d -p 420:420 --name myapp sztauer/sandbox
+docker run -d -p 420:420 --network sztauer --name myapp sztauer/sandbox
 ```
 
 Otwórz `localhost:420/sztauer`. Gotowe.
@@ -54,25 +54,25 @@ Kolejne uruchomienia bez logowania (jeśli volume zachowany).
 
 ```bash
 # Podstawowe (zero config):
-docker run -d -p 420:420 --name myapp sztauer/sandbox
+docker run -d -p 420:420 --network sztauer --name myapp sztauer/sandbox
 
 # Z persystentnym workspace:
-docker run -d -p 420:420 -v ~/myapp:/home/coder --name myapp sztauer/sandbox
+docker run -d -p 420:420 --network sztauer -v ~/myapp:/home/coder --name myapp sztauer/sandbox
 
 # Z persystentnym tokenem Claude (przeżyje docker rm):
-docker run -d -p 420:420 -v claude-token:/home/coder/.claude --name myapp sztauer/sandbox
+docker run -d -p 420:420 --network sztauer -v claude-token:/home/coder/.claude --name myapp sztauer/sandbox
 
 # Git credentials z hosta:
-docker run -d -p 420:420 \
+docker run -d -p 420:420 --network sztauer \
   -v ~/.gitconfig:/home/coder/.gitconfig:ro \
   -v ~/.ssh:/home/coder/.ssh:ro \
   --name myapp sztauer/sandbox
 
 # Inny port:
-docker run -d -p 8080:420 --name myapp sztauer/sandbox
+docker run -d -p 8080:420 --network sztauer --name myapp sztauer/sandbox
 
 # GPU:
-docker run -d -p 420:420 --gpus all --name myapp sztauer/sandbox
+docker run -d -p 420:420 --network sztauer --gpus all --name myapp sztauer/sandbox
 ```
 
 ## Zarządzanie
@@ -108,11 +108,12 @@ Gdy żadna aplikacja nie nasłuchuje → strona placeholder z informacją.
 
 ## Multi-project (opcjonalny)
 
-Wiele projektów jednocześnie — różne porty:
+Wiele projektów jednocześnie — różne porty, wspólna sieć:
 
 ```bash
-docker run -d -p 420:420 --name project-a sztauer/sandbox
-docker run -d -p 421:420 --name project-b sztauer/sandbox
+docker run -d -p 420:420 --network sztauer --name frontend sztauer/sandbox
+docker run -d -p 421:420 --network sztauer --name backend sztauer/sandbox
+# frontend może wywołać backend: curl http://backend:3000
 ```
 
 Lub compose z subdomenami (template z README):

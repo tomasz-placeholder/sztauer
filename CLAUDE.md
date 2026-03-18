@@ -14,7 +14,7 @@ Zero plików, zero kluczy API. Logowanie przez Claude Max przy pierwszym uruchom
 
 ```bash
 # Start:
-docker run -d -p 420:420 --name myapp sztauer/sandbox
+docker run -d -p 420:420 --network sztauer --name myapp sztauer/sandbox
 
 # Stop:
 docker stop myapp
@@ -59,11 +59,12 @@ docs/                               — VISION, ARCHITECTURE, SPEC, UI
 ## Granice
 
 **Zawsze:**
-- `docker run -p 420:420` bez env vars wystarczy do startu
+- `docker run -p 420:420 --network sztauer` bez env vars wystarczy do startu
 - `/sztauer` = workspace (split screen). `/` = aplikacja użytkownika
+- Każdy kontener w sieci `sztauer` — instancje widzą się po nazwie kontenera
 - Claude Code w dangerous mode z max effort/thinking od startu
 - VS Code bez welcome screen, z pre-installed pluginami
-- Firewall default-deny z allowlistą
+- Firewall default-deny z allowlistą. Ruch w sieci `sztauer` dozwolony.
 - Domyślny CLAUDE.md w każdej nowej instancji (nie nadpisuj istniejącego)
 - Obraz multi-arch (amd64 + arm64)
 

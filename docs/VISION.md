@@ -34,6 +34,8 @@ Otwierasz `localhost:420/sztauer` — split screen: VS Code po lewej, Claude Cod
 
 6. **Jeden obraz, wiele maszyn.** Ten sam obraz na workstation, laptopie i RPi (multi-arch). Token Claude Max persystowany w volume.
 
+7. **Wspólna sieć.** Wszystkie instancje w jednej sieci Docker (`sztauer`). Widzą się po nazwie kontenera — frontend wywołuje backend bez konfiguracji portów.
+
 ## Nie-cele
 
 - **Nie wymaga klucza API.** Autentykacja przez Claude Max (OAuth w przeglądarce).
