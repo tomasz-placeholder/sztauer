@@ -1,0 +1,30 @@
+services:
+  workspace:
+    image: sztauer
+    build: .
+    container_name: ${PROJECT_NAME:-myapp}
+    hostname: ${PROJECT_NAME:-myapp}
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - workspace:/home/coder
+      - claude:/home/coder/.claude
+    labels:
+      - "sztauer.project=${PROJECT_NAME:-myapp}"
+      - "caddy=${PROJECT_NAME:-myapp}.localhost"
+      - "caddy.reverse_proxy={{upstreams 420}}"
+    networks:
+      - sztauer
+      - proxy
+
+volumes:
+  workspace:
+    name: "sztauer-${PROJECT_NAME:-myapp}"
+  claude:
+    name: "sztauer-claude-${PROJECT_NAME:-myapp}"
+
+networks:
+  sztauer:
+    external: true
+  proxy:
+    external: true

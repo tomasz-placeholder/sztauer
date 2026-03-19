@@ -1,0 +1,147 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_call:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+
+      - name: ShellCheck
+        uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          scandir: "."
+          severity: warning
+
+  build-and-test:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t sztauer .
+
+      - name: Install container-structure-test
+        run: |
+          curl -LO https://storage.googleapis.com/container-structure-test/latest/container-structure-test-linux-amd64
+          chmod +x container-structure-test-linux-amd64
+          sudo mv container-structure-test-linux-amd64 /usr/local/bin/container-structure-test
+
+      - name: Run structure tests
+        run: container-structure-test test --image sztauer --config tests/structure-test.yaml
+
+      - name: Run bats tests (entrypoint)
+        run: docker run --rm --entrypoint bats -v "$PWD/tests:/tests" sztauer /tests/entrypoint.bats
+
+      - name: Run bats tests (firewall)
+        run: docker run --rm --entrypoint bats --cap-add NET_ADMIN -v "$PWD/tests:/tests" sztauer /tests/firewall.bats
+
+      - name: Smoke test
+        run: bash tests/smoke.sh
+
+      - name: Routing test
+        run: bash tests/routing.sh
+
+      - name: Network test
+        run: bash tests/network.sh
+
+      - name: Persistence test
+        run: bash tests/persistence.sh
+
+      - name: Multi-project test
+        run: bash tests/multiproject.sh
+
+  e2e:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t sztauer .
+
+      - name: Start container
+        run: |
+          docker network create sztauer-e2e || true
+          docker run -d --name sztauer-e2e --network sztauer-e2e --cap-add NET_ADMIN -p 420:420 sztauer
+          for i in $(seq 1 60); do
+            STATUS=$(docker inspect --format='{{.State.Health.Status}}' sztauer-e2e 2>/dev/null || echo unknown)
+            [ "$STATUS" = "healthy" ] && break
+            sleep 1
+          done
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Playwright
+        working-directory: tests/e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        working-directory: tests/e2e
+        run: npx playwright test
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker rm -f sztauer-e2e 2>/dev/null || true
+          docker network rm sztauer-e2e 2>/dev/null || true
+
+  security:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t sztauer .
+
+      - name: Trivy vulnerability scan (table)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: sztauer
+          severity: CRITICAL
+          exit-code: 1
+          format: table
+          output: trivy-report.txt
+
+      - name: Trivy SARIF scan
+        if: always()
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: sztauer
+          severity: CRITICAL,HIGH
+          format: sarif
+          output: trivy-results.sarif
+
+      - name: Upload SARIF to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+
+      - name: Upload Trivy report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: |
+            trivy-report.txt
+            trivy-results.sarif

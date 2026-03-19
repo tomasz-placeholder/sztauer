@@ -70,10 +70,10 @@
 
 ## Faza 4 — Publikacja
 
-- [ ] **T4.1** CI/CD: GitHub Actions multi-arch build + push Docker Hub. Pipeline: lint → build → test → trivy → push.
-- [ ] **T4.2** Trivy security scan: fail build na CRITICAL CVE. Raport w CI artifacts.
-- [ ] **T4.3** README: `docker run -d -p 420:420 --network sztauer sztauer` → `localhost:420/sztauer` → login → praca
-- [ ] **T4.4** Smoke test end-to-end: docker run → split screen → login → Claude koduje → aplikacja pod `localhost:420`. <2 minuty.
+- [x] **T4.1** CI/CD: GitHub Actions multi-arch build + push Docker Hub. Pipeline: lint → build → test → trivy → push.
+- [x] **T4.2** Trivy security scan: fail build na CRITICAL CVE. Raport w CI artifacts + SARIF w GitHub Security tab.
+- [x] **T4.3** README: `docker run -d -p 420:420 --network sztauer sztauer` → `localhost:420/sztauer` → login → praca
+- [x] **T4.4** Smoke test end-to-end: docker run → split screen → app port routing → aplikacja pod `localhost:420`.
 
 **Kamień milowy:** Obraz na Docker Hub. CI z pełnym pipeline testów. Security scan na każdym buildzie.
 

@@ -1,0 +1,12 @@
+.git
+.github
+docs
+tests
+.gitignore
+.dockerignore
+.env
+.DS_Store
+*.swp
+README.md
+CLAUDE.md
+tasks.md

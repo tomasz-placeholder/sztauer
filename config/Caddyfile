@@ -1,0 +1,31 @@
+:420 {
+	# code-server: strip prefix, proxy to :8080
+	handle /sztauer/editor* {
+		uri strip_prefix /sztauer/editor
+		reverse_proxy localhost:8080
+	}
+
+	# ttyd: has native --base-path, preserve path
+	handle /sztauer/terminal* {
+		reverse_proxy localhost:7681
+	}
+
+	# Split screen page
+	@splitscreen path /sztauer /sztauer/
+	handle @splitscreen {
+		root * /opt/sztauer/web
+		rewrite * /index.html
+		file_server
+	}
+
+	# App port (default 3000)
+	handle {
+		reverse_proxy localhost:3000
+	}
+
+	handle_errors {
+		root * /opt/sztauer/web
+		rewrite * /placeholder.html
+		file_server
+	}
+}
